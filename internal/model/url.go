@@ -11,3 +11,9 @@ type URL struct {
 	UserID uint
 	User   User
 }
+
+type URLResponse struct {
+	ShortCode string    `json:"short_code"`
+	LongURL   string    `json:"long_url"`
+	CreatedAt time.Time `json:"created_at"`
+}

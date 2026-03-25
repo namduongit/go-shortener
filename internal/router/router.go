@@ -11,26 +11,32 @@ func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	r.SetTrustedProxies(nil)
 
-	// Public auth routes
-	r.POST("/register", handler.Register)
-	r.POST("/login", handler.Login)
-
-	// Protected routes
-	auth := r.Group("/")
-	auth.Use(middleware.AuthMiddleware())
+	authGroup := r.Group("/auth")
 	{
-		// URL routes
-		auth.POST("/shorten", handler.CreateShortURL)
-		auth.GET("/urls", handler.GetAllURLs)
-		auth.DELETE("/urls/:code", handler.DeleteURL)
-
-		// File routes - uploads require auth
-		auth.POST("/upload", handler.UploadFile)
+		authGroup.POST("/register", handler.Register)
+		authGroup.POST("/login", handler.Login)
 	}
 
-	// Public routes
-	r.GET("/files/:filename", handler.GetFile)
-	r.GET("/:code", handler.RedirectURL)
+	urlGroup := r.Group("/api/urls")
+	urlGroup.Use(middleware.AuthMiddleware())
+	{
+		urlGroup.GET("/", handler.GetUrls)
+
+		urlGroup.POST("/", handler.CreateShortURL)
+
+		urlGroup.GET("/:code", handler.RedirectURL)
+
+		urlGroup.DELETE("/:code", handler.DeleteURL)
+	}
+
+	fileGroup := r.Group("/api/files")
+	fileGroup.Use(middleware.AuthMiddleware())
+	{
+		fileGroup.GET("/", handler.GetFiles)
+		fileGroup.POST("/", handler.UploadFile)
+		fileGroup.GET("/:filename", handler.GetFile)
+		fileGroup.DELETE("/:filename", handler.DeleteFile)
+	}
 
 	return r
 }

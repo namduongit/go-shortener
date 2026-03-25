@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"url-shortener/internal/config"
@@ -12,21 +13,65 @@ import (
 	"gorm.io/gorm"
 )
 
+var port = config.GetConfig().PORT
+var host = config.GetConfig().HOST
+
+func GetUrls(c *gin.Context) {
+	uid := c.GetUint("uid")
+	if uid == 0 {
+		c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
+			[]string{"User not exists"},
+			config.RestFulNotFound,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
+
+	urls, err := service.GetListByUserID(uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch urls"})
+		return
+	}
+
+	c.JSON(http.StatusOK, config.GinResponse(
+		map[string]any{
+			"accountID": uid,
+			"urls":      urls,
+		},
+		config.RestFulSuccess,
+		nil,
+		config.RestFulCodeSuccess,
+	))
+}
+
 type CreateURLRequest struct {
 	URL string `json:"url"`
 }
 
 func CreateShortURL(c *gin.Context) {
-	userID := c.GetUint("user_id")
+	userID := c.GetUint("uid")
 
 	var req CreateURLRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.URL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid"})
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			[]string{"Required url field"},
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
 		return
 	}
 
 	var user model.User
 	config.DB.Preload("Plan").First(&user, userID)
+
+	if user.PlanID == 0 {
+		c.JSON(http.StatusForbidden, config.GinErrorResponse(
+			[]string{"User plan not found"},
+			config.RestFulForbidden,
+			config.RestFulCodeForbidden,
+		))
+		return
+	}
 
 	var count int64
 	config.DB.Model(&model.URL{}).
@@ -34,7 +79,11 @@ func CreateShortURL(c *gin.Context) {
 		Count(&count)
 
 	if int(count) >= user.Plan.URLLimit {
-		c.JSON(http.StatusForbidden, gin.H{"error": "url limit exceeded"})
+		c.JSON(http.StatusForbidden, config.GinErrorResponse(
+			[]string{"Url limit exceeded"},
+			config.RestFulForbidden,
+			config.RestFulCodeForbidden,
+		))
 		return
 	}
 
@@ -48,37 +97,41 @@ func CreateShortURL(c *gin.Context) {
 
 	config.DB.Create(&url)
 
-	c.JSON(http.StatusOK, gin.H{
-		"short_url": "http://localhost:8080/" + code,
-	})
+	c.JSON(http.StatusOK, config.GinResponse(
+		map[string]string{
+			"short_url": host + ":" + port + "/api/urls/" + code,
+		},
+		config.RestFulSuccess,
+		nil,
+		config.RestFulCodeSuccess,
+	))
 }
 
 func RedirectURL(c *gin.Context) {
 	code := c.Param("code")
+	fmt.Println("Redirecting code:", code)
 
 	longURL, err := service.GetLongURL(code)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "url not found"})
+		c.JSON(http.StatusNotFound, config.GinErrorResponse(
+			[]string{"Url not found"},
+			config.RestFulNotFound,
+			config.RestFulCodeNotFound,
+		))
 		return
 	}
 
 	c.Redirect(http.StatusFound, longURL)
 }
 
-func GetAllURLs(c *gin.Context) {
-	urls, err := service.ListURLs()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch urls"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": urls})
-}
-
 func DeleteURL(c *gin.Context) {
 	code := c.Param("code")
 	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing code"})
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			[]string{"Missing code"},
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
 		return
 	}
 
@@ -87,7 +140,11 @@ func DeleteURL(c *gin.Context) {
 		if err == gorm.ErrRecordNotFound {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": "cannot delete url"})
+		c.JSON(status, config.GinErrorResponse(
+			[]string{"Cannot delete url"},
+			config.RestFulNotFound,
+			config.RestFulCodeNotFound,
+		))
 		return
 	}
 

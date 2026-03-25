@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
 	"url-shortener/internal/router"
 )
 
 func main() {
+	var port = config.GetConfig().PORT
+	var host = config.GetConfig().HOST
+
 	config.ConnectDB()
 
 	config.DB.AutoMigrate(
@@ -23,5 +27,6 @@ func main() {
 	})
 
 	router := router.SetupRouter()
-	router.Run(":8080")
+	fmt.Println("Server running on: ", host, ":", port)
+	router.Run(":" + port)
 }

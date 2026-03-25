@@ -2,16 +2,15 @@ package handler
 
 import (
 	"net/http"
-	"time"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
+	"url-shortener/internal/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var jwtKey = []byte(config.GetConfig().JWTSecret)
+var jwtKey = config.GetConfig().JWTSecret
 
 type RegisterRequest struct {
 	Email    string `json:"email"`
@@ -22,29 +21,44 @@ func Register(c *gin.Context) {
 	var req RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			[]string{"Required email and password"},
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
 		return
 	}
 
-	// hash password
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.Password), 10)
 
 	var plan model.Plan
-	// Get free plan
 	config.DB.Where("name = ?", "Free").First(&plan)
 
 	user := model.User{
 		Email:    req.Email,
 		Password: string(hashed),
 		PlanID:   plan.ID,
+		Role:     model.RoleUser,
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user exists"})
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			[]string{"Email already exists"},
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "registered"})
+	c.JSON(http.StatusOK, config.GinResponse(
+		map[string]any{
+			"email": user.Email,
+			"plan":  plan.Name,
+		},
+		config.RestFulSuccess,
+		nil,
+		config.RestFulCodeSuccess,
+	))
 }
 
 type LoginRequest struct {
@@ -54,29 +68,50 @@ type LoginRequest struct {
 
 func Login(c *gin.Context) {
 	var req LoginRequest
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			[]string{"Required email and password"},
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
 
 	var user model.User
 	if err := config.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
+			[]string{"Invalid credentials"},
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
+		))
 		return
 	}
 
-	// check password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
+			[]string{"Invalid credentials"},
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
+		))
 		return
 	}
 
-	// Generate JWT
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	})
+	tokenString, _ := utils.GenerateToken(
+		map[string]any{
+			"uid":   user.ID,
+			"email": user.Email,
+			"role":  user.Role,
+		}, string(jwtKey), string(user.Role), int(user.ID),
+	)
 
-	tokenString, _ := token.SignedString(jwtKey)
-
-	c.JSON(http.StatusOK, gin.H{
-		"token": tokenString,
-	})
+	c.JSON(http.StatusOK, config.GinResponse(
+		map[string]any{
+			"email": user.Email,
+			"role":  user.Role,
+			"token": tokenString,
+		},
+		config.RestFulSuccess,
+		nil,
+		config.RestFulCodeSuccess,
+	))
 }

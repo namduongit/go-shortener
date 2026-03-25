@@ -9,6 +9,9 @@ import (
 )
 
 type AppConfig struct {
+	PORT string
+	HOST string
+
 	DBHost     string
 	DBUser     string
 	DBPassword string
@@ -30,6 +33,9 @@ func GetConfig() AppConfig {
 		}
 
 		cfg = AppConfig{
+			PORT: getEnv("PORT", "8080"),
+			HOST: getEnv("HOST", "http://localhost"),
+
 			DBHost:     getEnv("DB_HOST", "localhost"),
 			DBUser:     getEnv("DB_USER", "postgres"),
 			DBPassword: getEnv("DB_PASSWORD", ""),

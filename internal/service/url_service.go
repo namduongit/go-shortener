@@ -8,6 +8,24 @@ import (
 	"github.com/google/uuid"
 )
 
+func GetListByUserID(userID uint) ([]model.URLResponse, error) {
+	urls, err := repository.GetByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]model.URLResponse, len(urls))
+	for i, url := range urls {
+		result[i] = model.URLResponse{
+			ShortCode: url.ShortCode,
+			LongURL:   url.LongURL,
+			CreatedAt: url.CreatedAt,
+		}
+	}
+
+	return result, nil
+}
+
 func CreateShortURL(longURL string) (string, error) {
 	code := strings.ReplaceAll(uuid.New().String(), "-", "")[:6]
 
@@ -31,10 +49,6 @@ func GetLongURL(code string) (string, error) {
 	}
 
 	return url.LongURL, nil
-}
-
-func ListURLs() ([]model.URL, error) {
-	return repository.GetAllURLs()
 }
 
 func DeleteURL(code string) error {
