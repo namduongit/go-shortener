@@ -29,8 +29,8 @@ func Register(c *gin.Context) {
 	// hash password
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.Password), 10)
 
-	// lấy plan free
 	var plan model.Plan
+	// Get free plan
 	config.DB.Where("name = ?", "Free").First(&plan)
 
 	user := model.User{
@@ -68,7 +68,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// tạo token
+	// Generate JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),

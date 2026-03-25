@@ -2,6 +2,7 @@ package router
 
 import (
 	"url-shortener/internal/handler"
+	"url-shortener/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,19 +11,26 @@ func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	r.SetTrustedProxies(nil)
 
-	// Auth routes
+	// Public auth routes
 	r.POST("/register", handler.Register)
 	r.POST("/login", handler.Login)
 
-	// URL routes
-	r.POST("/shorten", handler.CreateShortURL)
-	r.GET("/urls", handler.GetAllURLs)
-	r.DELETE("/urls/:code", handler.DeleteURL)
-	r.GET("/:code", handler.RedirectURL)
+	// Protected routes
+	auth := r.Group("/")
+	auth.Use(middleware.AuthMiddleware())
+	{
+		// URL routes
+		auth.POST("/shorten", handler.CreateShortURL)
+		auth.GET("/urls", handler.GetAllURLs)
+		auth.DELETE("/urls/:code", handler.DeleteURL)
 
-	// File routes
-	r.POST("/upload", handler.UploadFile)
+		// File routes - uploads require auth
+		auth.POST("/upload", handler.UploadFile)
+	}
+
+	// Public routes
 	r.GET("/files/:filename", handler.GetFile)
+	r.GET("/:code", handler.RedirectURL)
 
 	return r
 }
