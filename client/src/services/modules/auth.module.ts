@@ -1,22 +1,22 @@
 import { Axios } from "../../libs/api"
-import type { RestFulResponse } from "../../libs/response";
+import type { RestResponse } from "../../libs/response";
 import type { ConfigResponse, LoginForm, LoginResponse, RegisterForm, RegisterResponse } from "../types/auth.type"
 
 const api = Axios();
 
 export const AuthModule = {
-    async Login(data: LoginForm): Promise<RestFulResponse<LoginResponse>> {
-        const response = await api.post("/auth/login", data);
+    async Login(data: LoginForm) {
+        const response = await api.post<RestResponse<LoginResponse>>("/auth/login", data);
         return response.data;
     },
 
-    async Register(data: RegisterForm): Promise<RestFulResponse<RegisterResponse>> {
-        const response = await api.post("/auth/register", data);
+    async Register(data: RegisterForm) {
+        const response = await api.post<RestResponse<RegisterResponse>>("/auth/register", data);
         return response.data;
     },
 
-    async Config():Promise<RestFulResponse<ConfigResponse>> {
-        const response = await api.get("/auth/config");
+    async Config(){
+        const response = await api.get<RestResponse<ConfigResponse>>("/auth/config");
         return response.data;
     }
 }

@@ -27,7 +27,12 @@ const AuthenticateProvider = ({ children }: { children: React.ReactNode }) => {
             const parsed: LoginResponse = JSON.parse(local);
             if (parsed) {
                 const result = await execute(() => Config(), {
-                    onSuccess: (isValid) => setAuthConfig(Boolean(isValid)),
+                    onSuccess: (isValid) => {
+                        setAuthConfig(Boolean(isValid));
+                        if (!isValid) {
+                            localStorage.removeItem("GO_ACCOUNT");
+                        }
+                    },
                     onError: () => setAuthConfig(false)
                 });
 

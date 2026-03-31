@@ -7,7 +7,7 @@ interface PublicRouteProps {
     children?: ReactNode;
 }
 
-const PublicRoute = ({ redirectPath = "/", children }: PublicRouteProps) => {
+const PublicRoute = ({ redirectPath = "/page/urls", children }: PublicRouteProps) => {
     const { authConfig, checkingAuth } = useAuthenticate();
 
     if (checkingAuth) {

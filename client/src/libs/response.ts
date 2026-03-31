@@ -26,3 +26,5 @@ export type RestFulResponse<T> = {
     errs: HttpError;
     data: T;
 }
+
+export type RestResponse<T> = RestFulResponse<T>;

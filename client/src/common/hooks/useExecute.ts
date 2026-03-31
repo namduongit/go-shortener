@@ -28,7 +28,7 @@ export const useExecute = <T>() => {
             }
 
         } catch (error: unknown) {
-            console.log("======= Error debug: ", error);
+            console.log("=======    Error debug: ", error);
             setError(error);
             options?.onError?.(error);
         } finally {
