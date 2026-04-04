@@ -12,10 +12,11 @@ func CreateFile(file *model.File) (*model.File, error) {
 	return file, err
 }
 
-func GetFilesByUserID(userID uint) ([]model.File, error) {
+func GetFilesByAccountID(accountID uint) ([]model.File, error) {
 	var files []model.File
 	err := config.DBClient.
-		Where("account_id = ?", userID).
+		Preload("Folder").
+		Where("account_id = ?", accountID).
 		Order("created_at DESC").
 		Find(&files).Error
 	return files, err

@@ -12,13 +12,14 @@ import (
 
 var cfg = config.GetConfig()
 
-func CreateShortURL(accountID uint, longURL string) (*model.URL, error) {
+func CreateShortURL(accountID uint, longURL string, description string) (*model.URL, error) {
 	code := strings.ReplaceAll(uuid.New().String(), "-", "")[:6]
 
 	url := model.URL{
-		ShortCode: code,
-		LongURL:   longURL,
-		AccountID: accountID,
+		ShortCode:   code,
+		LongURL:     longURL,
+		Description: description,
+		AccountID:   accountID,
 	}
 
 	err := repository.CreateURL(&url)

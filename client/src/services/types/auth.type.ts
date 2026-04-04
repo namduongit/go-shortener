@@ -12,12 +12,17 @@ export type RegisterForm = {
 export type LoginResponse = {
     email: string;
     role: string;
-    plan: string;
+    plan_name: string;
 }
 
 export type RegisterResponse = {
     email: string;
-    plan: string;
+    role: string;
+    plan_name: string;
 }
 
-export type ConfigResponse = boolean;
+export type ConfigResponse = {
+    is_authenticated: boolean;
+}
+
+export type LogoutResponse = null;

@@ -1,32 +1,146 @@
-const accountInfo = {
-    email: "minh.hoang@brand.com",
-    name: "Hoàng Minh",
-    birthday: "14/07/1995",
-    company: "Brand Studio",
-    plan: "Studio Unlimited",
+import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
+import { useAuthenticate } from "../../common/hooks/useAuthenticate";
+import { useExecute } from "../../common/hooks/useExecute";
+import { useNotificate } from "../../common/hooks/useNotificate";
+import Button from "../../components/ui/button/button";
+import { ProfileModule } from "../../services/modules/profile.module";
+import type { ProfileResponse, UpdateProfileForm } from "../../services/types/profile.type";
+
+const inputClasses =
+    "mt-2 w-full rounded-xl border border-[#d9e1ef] bg-white px-4 py-3 text-sm text-[#202124] placeholder:text-[#80868b] transition focus:border-[#1a73e8] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/15";
+
+const defaultForm: UpdateProfileForm = {
+    username: "",
+    avatar_url: "",
+    full_name: "",
+    company_name: "",
+    address: "",
+    phone: ""
 };
 
 const AccountInfoPage = () => {
+    const authenticate = useAuthenticate();
+    const notificate = useNotificate();
+    const { execute: executeGetProfile, loading: loadingProfile } = useExecute<ProfileResponse>();
+    const { execute: executeUpdateProfile, loading: savingProfile } = useExecute<ProfileResponse>();
+
+    const [form, setForm] = useState<UpdateProfileForm>(defaultForm);
+
+    useEffect(() => {
+        void executeGetProfile(() => ProfileModule.GetProfile(), {
+            onSuccess: (profile: ProfileResponse) => {
+                setForm({
+                    username: profile.username ?? "",
+                    avatar_url: profile.avatar_url ?? "",
+                    full_name: profile.full_name ?? "",
+                    company_name: profile.company_name ?? "",
+                    address: profile.address ?? "",
+                    phone: profile.phone ?? ""
+                });
+            },
+            onError: () => {
+                notificate.showToast({
+                    type: "error",
+                    title: "Không tải được hồ sơ",
+                    message: "Vui lòng thử tải lại trang hoặc kiểm tra đăng nhập."
+                });
+            }
+        });
+    }, []);
+
+    const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = event.target;
+        setForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        await executeUpdateProfile(() => ProfileModule.UpdateProfile(form), {
+            onSuccess: (profile: ProfileResponse) => {
+                setForm({
+                    username: profile.username ?? "",
+                    avatar_url: profile.avatar_url ?? "",
+                    full_name: profile.full_name ?? "",
+                    company_name: profile.company_name ?? "",
+                    address: profile.address ?? "",
+                    phone: profile.phone ?? ""
+                });
+
+                notificate.showToast({
+                    type: "success",
+                    title: "Đã cập nhật hồ sơ",
+                    message: "Thông tin tài khoản đã được lưu thành công."
+                });
+            },
+            onError: () => {
+                notificate.showToast({
+                    type: "error",
+                    title: "Cập nhật thất bại",
+                    message: "Không thể lưu hồ sơ. Vui lòng thử lại."
+                });
+            }
+        });
+    };
+
     return (
-        <div className="space-y-8">
-            <header className="rounded-3xl border border-[#ded7c7] bg-white/95 p-10 shadow-[0_25px_90px_rgba(20,16,12,0.12)]">
-                <p className="text-xs uppercase tracking-[0.45em] text-[#8b714c]">Tài khoản</p>
-                <h1 className="mt-3 text-4xl font-serif text-[#1f1d19]">Thông tin hồ sơ</h1>
-                <p className="mt-2 text-sm text-[#4d493f]">Kiểm tra thông tin liên quan đến cá nhân và gói dịch vụ hiện tại.</p>
+        <div className="space-y-5">
+            <header className="rounded-3xl border border-[#e3e8f2] bg-[#f8fbff] p-5 md:p-7">
+                <p className="text-sm font-semibold text-[#5f6368]">Tài khoản</p>
+                <h1 className="mt-1 text-3xl font-semibold text-[#202124] md:text-4xl">Thông tin hồ sơ</h1>
+                <p className="mt-2 text-sm text-[#5f6368]">Email lấy từ phiên đăng nhập và không chỉnh sửa. Các thông tin khác có thể cập nhật trực tiếp.</p>
             </header>
 
-            <section className="rounded-3xl border border-[#dcd5c5] bg-white/95 p-8 shadow-[0_20px_70px_rgba(20,16,12,0.08)]">
-                <table className="w-full text-left text-sm text-[#3a3630]">
-                    <tbody>
-                        {Object.entries(accountInfo).map(([key, value], index) => (
-                            <tr key={key} className={index % 2 === 0 ? "bg-white" : "bg-[#fbf9f3]"}>
-                                <td className="px-4 py-4 text-xs uppercase tracking-[0.3em] text-[#8b714c]">{key}</td>
-                                <td className="px-4 py-4 text-[#2d2a26] font-semibold">{value}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </section>
+            <form className="rounded-3xl border border-[#e3e8f2] bg-white p-5 md:p-7" onSubmit={handleSubmit}>
+                <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="email">Email</label>
+                        <input id="email" name="email" className={`${inputClasses} bg-[#f6f8fc]`} value={authenticate.state.email} disabled readOnly />
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="plan">Gói hiện tại</label>
+                        <input id="plan" name="plan" className={`${inputClasses} bg-[#f6f8fc]`} value={authenticate.state.plan_name} disabled readOnly />
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="full_name">Họ và tên</label>
+                        <input id="full_name" name="full_name" className={inputClasses} value={form.full_name} onChange={handleChange} placeholder="Nhập họ và tên" />
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="username">Username</label>
+                        <input id="username" name="username" className={inputClasses} value={form.username} onChange={handleChange} placeholder="Nhập username" />
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="company_name">Công ty</label>
+                        <input id="company_name" name="company_name" className={inputClasses} value={form.company_name} onChange={handleChange} placeholder="Nhập tên công ty" />
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="phone">Số điện thoại</label>
+                        <input id="phone" name="phone" className={inputClasses} value={form.phone} onChange={handleChange} placeholder="Nhập số điện thoại" />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="address">Địa chỉ</label>
+                        <textarea id="address" name="address" className={`${inputClasses} min-h-28 resize-y`} value={form.address} onChange={handleChange} placeholder="Nhập địa chỉ" />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="text-sm font-semibold text-[#202124]" htmlFor="avatar_url">Avatar URL</label>
+                        <input id="avatar_url" name="avatar_url" className={inputClasses} value={form.avatar_url} onChange={handleChange} placeholder="https://..." />
+                    </div>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between gap-3">
+                    <p className="text-sm text-[#5f6368]">{loadingProfile ? "Đang tải hồ sơ..." : "Bạn có thể cập nhật và lưu thông tin bất kỳ lúc nào."}</p>
+                    <Button type="submit" disabled={loadingProfile || savingProfile}>
+                        {savingProfile ? "Đang lưu..." : "Lưu thay đổi"}
+                    </Button>
+                </div>
+            </form>
         </div>
     );
 };

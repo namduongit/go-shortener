@@ -1,3 +1,5 @@
+import PlanCard from "../../components/ui/plan-card/plan-card";
+
 const plans = [
     {
         id: "Essentials",
@@ -22,14 +24,14 @@ const plans = [
 
 const PlanPage = () => {
     return (
-        <div className="space-y-8">
-            <header className="rounded-3xl border border-[#ded7c7] bg-white/95 p-10 shadow-[0_25px_90px_rgba(20,16,12,0.12)]">
-                <p className="text-xs uppercase tracking-[0.45em] text-[#8b714c]">Plan</p>
-                <h1 className="mt-3 text-4xl font-serif text-[#1f1d19]">Nâng cấp trải nghiệm</h1>
-                <p className="mt-2 text-sm text-[#4d493f]">Chọn gói phù hợp để mở khóa nhiều URL hơn, dung lượng lớn hơn và workflow tự động.</p>
-                <div className="mt-6 overflow-hidden rounded-2xl border border-[#e4dbcc]">
-                    <table className="w-full text-left text-sm text-[#3a3630]">
-                        <thead className="bg-[#f7f3ea] text-xs uppercase tracking-wide text-[#7b6a4a]">
+        <div className="space-y-5">
+            <header className="rounded-3xl border border-[#e3e8f2] bg-[#f8fbff] p-5 md:p-7">
+                <p className="text-sm font-semibold text-[#5f6368]">Plan</p>
+                <h1 className="mt-1 text-3xl font-semibold text-[#202124] md:text-4xl">Nâng cấp gói dịch vụ</h1>
+                <p className="mt-2 text-sm text-[#5f6368]">Theo dõi gói hiện tại và chọn cấp độ phù hợp với nhu cầu lưu trữ và URL của bạn.</p>
+                <div className="mt-5 overflow-hidden rounded-2xl border border-[#e5eaf4] bg-white">
+                    <table className="w-full text-left text-sm text-[#202124]">
+                        <thead className="bg-[#fafbfd] text-xs uppercase tracking-wide text-[#5f6368]">
                             <tr>
                                 <th className="px-4 py-3">Hạng mục</th>
                                 <th className="px-4 py-3">Giá trị</th>
@@ -38,53 +40,39 @@ const PlanPage = () => {
                         </thead>
                         <tbody>
                             <tr className="bg-white">
-                                <td className="px-4 py-4 font-semibold text-[#2d2a26]">Gói hiện tại</td>
-                                <td className="px-4 py-4 text-[#4d493f]">Studio</td>
-                                <td className="px-4 py-4 text-[#4d493f]">Gia hạn sau 12 ngày</td>
+                                <td className="px-4 py-4 font-semibold text-[#202124]">Gói hiện tại</td>
+                                <td className="px-4 py-4 text-[#5f6368]">Studio</td>
+                                <td className="px-4 py-4 text-[#5f6368]">Gia hạn sau 12 ngày</td>
                             </tr>
-                            <tr className="bg-[#fbf9f3]">
-                                <td className="px-4 py-4 font-semibold text-[#2d2a26]">Số URL đã dùng</td>
-                                <td className="px-4 py-4 text-[#4d493f]">198/Không giới hạn</td>
-                                <td className="px-4 py-4 text-[#4d493f]">Bao gồm chiến dịch 2026</td>
+                            <tr className="bg-[#fcfdff]">
+                                <td className="px-4 py-4 font-semibold text-[#202124]">Số URL đã dùng</td>
+                                <td className="px-4 py-4 text-[#5f6368]">198/Không giới hạn</td>
+                                <td className="px-4 py-4 text-[#5f6368]">Bao gồm chiến dịch 2026</td>
                             </tr>
                             <tr className="bg-white">
-                                <td className="px-4 py-4 font-semibold text-[#2d2a26]">Dung lượng</td>
-                                <td className="px-4 py-4 text-[#4d493f]">73%</td>
-                                <td className="px-4 py-4 text-[#4d493f]">Lưu trữ 146 GB / 200 GB</td>
+                                <td className="px-4 py-4 font-semibold text-[#202124]">Dung lượng</td>
+                                <td className="px-4 py-4 text-[#5f6368]">73%</td>
+                                <td className="px-4 py-4 text-[#5f6368]">Lưu trữ 146 GB / 200 GB</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </header>
 
-            <section className="rounded-3xl border border-[#dcd5c5] bg-white/95 p-8 shadow-[0_20px_70px_rgba(20,16,12,0.08)]">
-                <h2 className="text-2xl font-serif text-[#1f1d19]">Chọn gói khác</h2>
-                <p className="text-sm text-[#5a5347]">So sánh lợi ích giữa các cấp độ để tìm lựa chọn phù hợp.</p>
+            <section className="rounded-3xl border border-[#e3e8f2] bg-white p-5 md:p-6">
+                <h2 className="text-2xl font-semibold text-[#202124]">Chọn gói khác</h2>
+                <p className="text-sm text-[#5f6368]">So sánh lợi ích giữa các cấp độ để tìm lựa chọn phù hợp.</p>
                 <div className="mt-6 grid gap-6 lg:grid-cols-3">
                     {plans.map((plan) => (
-                        <div
+                        <PlanCard
                             key={plan.id}
-                            className={`rounded-3xl border px-6 py-6 ${
-                                plan.highlight
-                                    ? "border-[#bfa77f] bg-[#f6f0e5] shadow-[0_25px_80px_rgba(20,16,12,0.15)]"
-                                    : "border-[#e5ddcf] bg-[#fbf9f3]"
-                            }`}
-                        >
-                            <p className="text-xs uppercase tracking-[0.35em] text-[#8b714c]">{plan.id}</p>
-                            <p className="mt-3 text-4xl font-serif text-[#1f1d19]">{plan.price}</p>
-                            <p className="mt-2 text-sm text-[#4d493f]">{plan.description}</p>
-                            <ul className="mt-4 space-y-2 text-sm text-[#342f28]">
-                                {plan.features.map((feature) => (
-                                    <li key={feature} className="flex items-center gap-2">
-                                        <span className="text-[#7a6544]">•</span>
-                                        {feature}
-                                    </li>
-                                ))}
-                            </ul>
-                            <button className="mt-6 w-full rounded-2xl border border-[#c2b8a8] px-4 py-2 text-sm font-semibold text-[#2d2a26] transition hover:bg-white">
-                                {plan.highlight ? "Giữ gói hiện tại" : "Liên hệ nâng cấp"}
-                            </button>
-                        </div>
+                            title={plan.id}
+                            price={plan.price}
+                            description={plan.description}
+                            features={plan.features}
+                            highlight={plan.highlight}
+                            actionLabel={plan.highlight ? "Giữ gói hiện tại" : "Liên hệ nâng cấp"}
+                        />
                     ))}
                 </div>
             </section>

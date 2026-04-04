@@ -1,6 +1,6 @@
 import { Axios } from "../../libs/api"
 import type { RestResponse } from "../../libs/response";
-import type { ConfigResponse, LoginForm, LoginResponse, RegisterForm, RegisterResponse } from "../types/auth.type"
+import type { ConfigResponse, LoginForm, LoginResponse, LogoutResponse, RegisterForm, RegisterResponse } from "../types/auth.type"
 
 const api = Axios();
 
@@ -17,6 +17,11 @@ export const AuthModule = {
 
     async Config(){
         const response = await api.get<RestResponse<ConfigResponse>>("/auth/config");
+        return response.data;
+    },
+
+    async Logout(){
+        const response = await api.post<RestResponse<LogoutResponse>>("/auth/logout");
         return response.data;
     }
 }

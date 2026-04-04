@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import Button from "../../button/button";
 
 interface CreateFolderModalProps {
     isOpen: boolean;
@@ -29,27 +30,29 @@ const CreateFolderModal = ({ isOpen, onClose, onSubmit }: CreateFolderModalProps
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1915]/60 px-4">
-            <div className="w-full max-w-md rounded-3xl border border-[#ded7c7] bg-white/95 p-6 shadow-[0_35px_120px_rgba(14,12,10,0.35)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f2937]/40 px-4">
+            <div className="w-full max-w-md rounded-3xl border border-[#d9e1ef] bg-white p-6 shadow-[0_35px_120px_rgba(34,61,102,0.18)] flex flex-col gap-5">
+
                 <div className="flex items-start justify-between">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.45em] text-[#8b714c]">Tạo thư mục</p>
-                        <h3 className="mt-2 text-2xl font-serif text-[#1f1d19]">Đặt tên thư mục mới</h3>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5f6368]">Tạo thư mục</p>
+                        <h3 className="mt-2 text-2xl font-semibold text-[#202124]">Đặt tên thư mục mới</h3>
                     </div>
-                    <button
-                        className="rounded-full border border-[#e2dacb] px-3 py-1 text-xs font-semibold text-[#2d2a26] hover:bg-[#fbf8f1]"
+                    <Button
+                        variant="ghost"
+                        className="px-3 py-1 text-xs"
                         onClick={onClose}
                     >
                         Đóng
-                    </button>
+                    </Button>
                 </div>
 
-                <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-                    <label className="text-sm font-semibold text-[#2d2a26]">
+                <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+                    <label className="text-sm font-semibold text-[#202124]">
                         Tên thư mục
                         <input
                             type="text"
-                            className="mt-2 w-full rounded-2xl border border-[#c2b8a8] bg-white px-4 py-3 text-sm text-[#2d2a26] placeholder:text-[#9c9688] focus:border-[#2d2a26] focus:outline-none focus:ring-2 focus:ring-[#b79c6d]/30"
+                            className="mt-2 w-full rounded-2xl border border-[#d9e1ef] bg-white px-4 py-3 text-sm text-[#202124] placeholder:text-[#80868b] focus:border-[#1a73e8] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/15"
                             placeholder="Ví dụ: Báo cáo Q2"
                             value={folderName}
                             onChange={(event) => setFolderName(event.target.value)}
@@ -57,19 +60,20 @@ const CreateFolderModal = ({ isOpen, onClose, onSubmit }: CreateFolderModalProps
                     </label>
 
                     <div className="flex justify-end gap-3">
-                        <button
+                        <Button
                             type="button"
-                            className="rounded-2xl border border-[#d4ccbd] px-4 py-2 text-sm font-semibold text-[#2d2a26] hover:bg-[#fbf8f1]"
+                            variant="secondary"
+                            className="rounded-2xl px-4 py-2"
                             onClick={onClose}
                         >
                             Hủy
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
-                            className="rounded-2xl bg-[#2d2a26] px-5 py-2 text-sm font-semibold tracking-wide text-white hover:bg-[#1c1915]"
+                            className="rounded-2xl px-5 py-2"
                         >
                             Tạo thư mục
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>

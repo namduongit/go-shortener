@@ -26,7 +26,7 @@ func GetFiles(c *gin.Context) {
 		return
 	}
 
-	files, err := service.GetFilesByUserID(accountID)
+	files, err := service.GetFilesByAccountID(accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			[]string{"Cannot fetch files"},
@@ -38,20 +38,25 @@ func GetFiles(c *gin.Context) {
 
 	fileResponse := make([]response.FileResponse, len(files))
 	for i, file := range files {
-		// Handle foder name later
-		folderName := ""
+		folderName := "root"
+		var folderID *uint
+
 		if file.FolderID != nil {
-			folder, err := service.GetFolderByID(*file.FolderID)
-			if err == nil {
-				folderName = folder.Name
-			}
+			folderID = file.FolderID
+		}
+		if file.Folder != nil {
+			folderName = file.Folder.Name
+			folderID = &file.Folder.ID
 		}
 		fileResponse[i] = response.FileResponse{
-			ID:         file.ID,
-			FileName:   file.FileName,
-			Size:       file.Size,
-			FolderName: folderName,
-			UploadedAt: file.CreatedAt,
+			ID:          file.ID,
+			FileName:    file.FileName,
+			FileType:    string(file.FileType),
+			ContentType: file.ContentType,
+			Size:        file.Size,
+			FolderName:  folderName,
+			FolderID:    folderID,
+			UploadedAt:  file.CreatedAt,
 		}
 	}
 
@@ -113,10 +118,12 @@ func UploadFile(c *gin.Context) {
 	}
 
 	respnse := response.FileResponse{
-		ID:       file.ID,
-		FileName: file.FileName,
-		FileType: string(file.FileType),
-		Size:     file.Size,
+		ID:          file.ID,
+		FileName:    file.FileName,
+		FileType:    string(file.FileType),
+		ContentType: file.ContentType,
+		Size:        file.Size,
+		FolderID:    file.FolderID,
 
 		UploadedAt: file.CreatedAt,
 	}

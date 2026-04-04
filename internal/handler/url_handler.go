@@ -41,7 +41,8 @@ func GetUrls(c *gin.Context) {
 			ID:          url.ID,
 			Code:        url.ShortCode,
 			OriginalURL: url.LongURL,
-			ShortURL:    "",
+			ShortURL:    cfg.ServerDirect + "/" + url.ShortCode,
+			Description: url.Description,
 			CreatedAt:   url.CreatedAt,
 		}
 	}
@@ -61,7 +62,8 @@ func GetUrls(c *gin.Context) {
 }
 
 type CreateURLRequest struct {
-	URL string `json:"url"`
+	URL         string `json:"url"`
+	Description string `json:"description"`
 }
 
 func CreateShortURL(c *gin.Context) {
@@ -87,7 +89,7 @@ func CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	url, err := service.CreateShortURL(accountID, req.URL)
+	url, err := service.CreateShortURL(accountID, req.URL, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
@@ -101,6 +103,7 @@ func CreateShortURL(c *gin.Context) {
 		ID:          url.ID,
 		Code:        url.ShortCode,
 		OriginalURL: url.LongURL,
+		Description: url.Description,
 		ShortURL:    cfg.ServerDirect + "/" + url.ShortCode,
 		CreatedAt:   url.CreatedAt,
 	}

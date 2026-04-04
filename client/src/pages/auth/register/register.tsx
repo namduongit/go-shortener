@@ -1,80 +1,80 @@
 import { type ChangeEvent, type FormEvent, useState } from "react";
+import { Link, useNavigate } from "react-router";
+import type { RegisterResponse, RegisterForm } from "../../../services/types/auth.type";
+
+import PublicLayout from "../../../components/layout/public-layout";
+import { AuthModule } from "../../../services/modules/auth.module";
+import { useExecute } from "../../../common/hooks/useExecute";
+import { useNotificate } from "../../../common/hooks/useNotificate";
 
 const inputClasses =
-	"mt-2 w-full rounded-xl border border-[#c6c0b3] bg-white px-4 py-3 text-sm text-[#2d2a26] placeholder:text-[#9c9688] transition focus:border-[#2d2a26] focus:outline-none focus:ring-2 focus:ring-[#94815e]/25";
+	"mt-2 w-full rounded-xl border border-[#d9e1ef] bg-white px-4 py-3 text-sm text-[#202124] placeholder:text-[#80868b] transition focus:border-[#1a73e8] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/15";
 
-type Status = {
-	type: "idle" | "success" | "error";
-	message: string;
-};
 
 const RegisterPage = () => {
-	const [form, setForm] = useState({
-		email: "",
-		password: "",
-		confirmPassword: "",
-	});
+	const { Register } = AuthModule;
+	const { execute } = useExecute<RegisterResponse>();
+	const notificate = useNotificate();
+	const navigate = useNavigate();
 
-	const [status, setStatus] = useState<Status>({ type: "idle", message: "" });
+	const [form, setForm] = useState<RegisterForm>({ email: "", password: "", confirmPassword: "" });
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = event.target;
 		setForm((prev) => ({ ...prev, [name]: value }));
-		setStatus({ type: "idle", message: "" });
 	};
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
 		if (!form.email || !form.password || !form.confirmPassword) {
-			setStatus({ type: "error", message: "Vui lòng điền đủ thông tin." });
 			return;
 		}
 
-		if (form.password !== form.confirmPassword) {
-			setStatus({ type: "error", message: "Mật khẩu xác nhận không khớp." });
-			return;
-		}
-
-		setStatus({ type: "success", message: "Tuyệt vời! Tài khoản đã sẵn sàng được tạo." });
+		execute(() => Register(form), {
+			onError: () => {
+				notificate.showToast({
+					type: "error",
+					title: "Đăng ký thất bại",
+					message: "Vui lòng kiểm tra lại thông tin đăng ký."
+				});
+			},
+			onSuccess: () => {
+				notificate.showToast({
+					type: "success",
+					title: "Thành công",
+					message: "Đăng ký thành công, bạn có thể đăng nhập ngay bây giờ."
+				});
+				new Promise(() => setTimeout(() => navigate("/auth/login"), 300));
+			}
+		});
 	};
 
 	return (
-		<div className="min-h-screen bg-[#fbf8f1] px-4 py-8">
-			<div className="mx-auto grid max-w-5xl gap-10 rounded-4xl border border-[#dfd9cb] bg-white/95 p-10 shadow-[0_30px_120px_rgba(25,22,18,0.12)] lg:grid-cols-[1.1fr_0.9fr]">
-				<section className="space-y-8">
-					<p className="text-sm uppercase tracking-[0.4em] text-[#947c52]">Tạo tài khoản</p>
-					<h1 className="text-4xl font-serif text-[#2d2a26]">Tham gia hệ thống quản lý liên kết</h1>
-					<p className="text-sm leading-relaxed text-[#4d493f]">
-						Phù hợp cho marketer, agency hoặc doanh nghiệp cần quản lý đường dẫn chuẩn mực và
-						nhất quán. Chúng tôi giữ phong cách cổ điển, tập trung vào trải nghiệm cơ bản nhưng
-						chỉn chu.
+		<PublicLayout>
+			<div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr]">
+				<section className="rounded-3xl border border-[#d9e1ef] bg-white p-6 shadow-[0_14px_40px_rgba(34,61,102,0.09)] md:p-10">
+					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5f6368]">Tạo tài khoản</p>
+					<h1 className="mt-3 text-4xl font-semibold text-[#202124] md:text-5xl">Bắt đầu với GMS Cloud</h1>
+					<p className="mt-4 text-sm leading-6 text-[#5f6368]">
+						Tạo tài khoản để dùng chung hệ thống quản lý file, URL, API và hồ sơ trong cùng một không gian.
 					</p>
 
-					<div className="space-y-5">
-						{["Khởi tạo thương hiệu", "Phân quyền nhóm", "Giám sát và thống kê"].map((item, index) => (
-							<div key={item} className="flex items-start gap-4">
-								<div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d5cec0] bg-[#f7f3ea] text-sm font-semibold text-[#7c6540]">
-									{index + 1}
-								</div>
-								<div>
-									<p className="font-semibold text-[#2d2a26]">{item}</p>
-									<p className="text-sm text-[#4d493f]">
-										{index === 0 && "Định nghĩa chuẩn thương hiệu trên mỗi liên kết."}
-										{index === 1 && "Cấu hình quyền truy cập rõ ràng cho từng vai trò."}
-										{index === 2 && "Theo dõi lượt click và tỷ lệ chuyển đổi ngay lập tức."}
-									</p>
-								</div>
-							</div>
-						))}
+					<div className="mt-8 space-y-3 rounded-2xl border border-[#e5eaf4] bg-[#f8fbff] p-5">
+						<p className="text-sm font-semibold text-[#202124]">Điểm chính</p>
+						<ul className="space-y-2 text-sm text-[#5f6368]">
+							<li>• Kiểu giao diện đồng bộ với dashboard bên trong.</li>
+							<li>• Tập trung vào file, folder, breadcrumb và thao tác tài khoản.</li>
+							<li>• Các bước tạo tài khoản ngắn, rõ và dễ tiếp cận.</li>
+						</ul>
 					</div>
 				</section>
 
-				<section className="rounded-[28px] border border-[#dcd6c6] bg-[#f6f2e9] p-8">
-					<form className="space-y-6" onSubmit={handleSubmit}>
+				<section className="rounded-3xl border border-[#d9e1ef] bg-white p-6 shadow-[0_14px_40px_rgba(34,61,102,0.09)] md:p-10">
+					<form className="space-y-5" onSubmit={handleSubmit}>
 						<div>
-							<label className="text-sm font-semibold text-[#2d2a26]" htmlFor="email">
-								Email công việc
+							<label className="text-sm font-semibold text-[#202124]" htmlFor="email">
+								Email
 							</label>
 							<input
 								id="email"
@@ -89,7 +89,7 @@ const RegisterPage = () => {
 						</div>
 
 						<div>
-							<label className="text-sm font-semibold text-[#2d2a26]" htmlFor="password">
+							<label className="text-sm font-semibold text-[#202124]" htmlFor="password">
 								Mật khẩu
 							</label>
 							<input
@@ -105,7 +105,7 @@ const RegisterPage = () => {
 						</div>
 
 						<div>
-							<label className="text-sm font-semibold text-[#2d2a26]" htmlFor="confirmPassword">
+							<label className="text-sm font-semibold text-[#202124]" htmlFor="confirmPassword">
 								Xác nhận mật khẩu
 							</label>
 							<input
@@ -120,36 +120,27 @@ const RegisterPage = () => {
 							/>
 						</div>
 
-						<p className="text-xs leading-relaxed text-[#5c574b]">
-							Khi tạo tài khoản, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật. Chúng tôi giữ dữ
-							liệu tối giản, chỉ phục vụ cho việc phân tích hiệu quả liên kết.
+						<p className="text-xs leading-relaxed text-[#5f6368]">
+							Bằng cách tạo tài khoản, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của hệ thống.
 						</p>
 
 						<button
 							type="submit"
-							className="w-full rounded-2xl bg-[#2d2a26] px-6 py-4 text-sm font-semibold uppercase tracking-widest text-white transition hover:bg-[#1c1915]"
+							className="w-full rounded-full bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#175fc0]"
 						>
 							Tạo tài khoản
 						</button>
 
-						<p className="text-center text-sm text-[#4d493f]">
-							Đã có tài khoản? <a className="font-semibold text-[#7c6540] hover:underline" href="/auth/login">Đăng nhập</a>
+						<p className="text-center text-sm text-[#5f6368]">
+							Đã có tài khoản?{' '}
+							<Link className="font-semibold text-[#1a73e8] hover:underline" to="/auth/login">
+								Đăng nhập
+							</Link>
 						</p>
-
-						{status.message && (
-							<p
-								className={`text-center text-sm ${
-									status.type === "error" ? "text-[#a04b3b]" : "text-[#7c6540]"
-								}`}
-								aria-live="polite"
-							>
-								{status.message}
-							</p>
-						)}
 					</form>
 				</section>
 			</div>
-		</div>
+		</PublicLayout>
 	);
 };
 

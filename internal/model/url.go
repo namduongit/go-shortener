@@ -7,8 +7,9 @@ import (
 type URL struct {
 	gorm.Model
 
-	ShortCode string `gorm:"uniqueIndex"`
-	LongURL   string
+	Description string
+	ShortCode   string `gorm:"uniqueIndex"`
+	LongURL     string
 
 	AccountID uint `gorm:"index"`
 }

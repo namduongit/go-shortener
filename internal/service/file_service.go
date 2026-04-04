@@ -62,19 +62,20 @@ func PushFileToCloud(context context.Context, accountID uint, fileHeader *multip
 	}
 
 	file := model.File{
-		FileName:   fileHeader.Filename,
-		FileType:   model.FileType(utils.GetFileType(fileHeader.Header.Get("Content-Type"))),
-		StorageKey: storageKey,
-		Size:       fileHeader.Size,
-		AccountID:  accountID,
-		FolderID:   folderID,
+		FileName:    fileHeader.Filename,
+		FileType:    model.FileType(utils.GetFileType(fileHeader.Header.Get("Content-Type"))),
+		ContentType: fileHeader.Header.Get("Content-Type"),
+		StorageKey:  storageKey,
+		Size:        fileHeader.Size,
+		AccountID:   accountID,
+		FolderID:    folderID,
 	}
 
 	return repository.CreateFile(&file)
 }
 
-func GetFilesByUserID(userID uint) ([]model.File, error) {
-	files, err := repository.GetFilesByUserID(userID)
+func GetFilesByAccountID(accountID uint) ([]model.File, error) {
+	files, err := repository.GetFilesByAccountID(accountID)
 	if err != nil {
 		return nil, err
 	}

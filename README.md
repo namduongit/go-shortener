@@ -1,18 +1,24 @@
-# LinkBeam URL Shortener & Cloud Storage
-**React SPA + Go (Gin) API for shortening links and storing personal files**  
+# GMS Cloud - Link Shortener + Drive-like Storage
+**React SPA + Go (Gin) API for link shortening, personal file storage, and public image delivery**  
 _Backend: Go 1.22 + Gin + GORM | Frontend: React + Vite + TypeScript_
 
 ---
 ## 1. Getting Started
 
+GMS Cloud is built around four core capabilities:
+- Convert long URLs into short links.
+- Store personal files in a drive-like folder structure.
+- Expose public image endpoints for embedding in other applications.
+- Provide REST APIs for integration with internal or external web/mobile apps.
+
 ### Clone the repository
 ```bash
-git clone https://github.com/namduongit/go-shortener
-cd go-shortener
+git clone https://github.com/namduongit/gms-cloud
+cd gms-cloud
 ```
 
 ### Project layout
-The backend lives in this repository; the React client consumes the exposed REST API.
+Backend and frontend live in the same repository; the React client consumes the Go REST API directly.
 ```text
 url-shorter/
 ├── client/ 					# Client side (React)
@@ -39,14 +45,15 @@ url-shorter/
 **Frontend**: create `web/.env` (or equivalent) with `VITE_API_BASE=http://localhost:8080` and enable `withCredentials` for Axios/fetch so cookies flow between SPA and API.
 
 ---
-## 3. Integrated Services
-- **JWT Auth**: Login returns an HttpOnly cookie (`accessToken`) plus profile metadata.
-- **URL Shortening**: Generates 6-character codes per user with per-plan quotas.
-- **Cloud-like File Storage**: Upload arbitrary files, download via signed route, list/delete per account.
-- **Plans & Limits**: Basic `Free` plan included; extend via `model.Plan` seeds.
-- **CORS**: Configured for `http://localhost:5173` by default; tweak in `internal/router/router.go`.
+## 3. Core Features
+- **JWT Authentication**: Sign in with an HttpOnly `accessToken` cookie and protect APIs per account.
+- **URL Shortener**: Generate short codes for long URLs and manage links per user.
+- **Drive-like File Storage**: Upload, list, delete, and organize files by folder.
+- **Public Image Endpoint**: Serve images through public routes for display in websites/apps.
+- **Plans & Limits**: Support plan-based limits (storage and URL count) for SaaS-style scaling.
+- **Integration-ready API**: APIs are designed for both the current frontend and external integrations.
 
-Documentation for new integrations lives under `HELP.md` or inline package comments.
+Detailed API documentation will be standardized with Swagger in the next step.
 
 ---
 ## 4. Running the Stack
@@ -58,34 +65,12 @@ docker compose logs -f  # tail logs
 
 ### Local commands
 - Backend (hot reload friendly): `go run ./cmd/main.go`
-- Frontend (from UI repo): `npm install && npm run dev`
+- Frontend (from `client/`): `npm install && npm run dev`
 
 Use `golang-migrate` or `gorm.AutoMigrate` to keep the schema aligned with models.
 
 ---
-## 5. API Highlights
-| Area | Endpoint | Notes |
-|------|----------|-------|
-| Auth | `POST /auth/register` | Creates account with default Free plan. |
-|      | `POST /auth/login`    | Sets `accessToken` cookie; returns profile payload. |
-|      | `GET /auth/config`    | Validates cookie; returns boolean for SPA bootstrapping. |
-| URLs | `GET /api/urls/`      | Authenticated list of user URLs. |
-|      | `POST /api/urls/`     | Creates short link, enforces per-plan quota. |
-|      | `GET /api/urls/:code` | Redirects to long URL (no auth required). |
-| Files| `GET /api/files/`     | Lists uploaded files for the account. |
-|      | `POST /api/files/`    | Multipart upload stored under `storage/`. |
-|      | `GET /api/files/:name`| Streams file content; auth required. |
-
-All responses follow the `RestFulResponse` envelope defined in `internal/config/rest_ful.go`.
-
----
-## 6. Deployment Notes
-- Set `HOST` to your HTTPS domain so cookies are marked `Secure`.
-- Configure an object store (S3, GCS, Azure Blob) for production file retention; the `storage/` folder is fine for development only.
-- Rotate `JWT_SECRET` regularly and consider shortening token TTL in `utils.GenerateToken` for stricter policies.
-
----
-## 7. Contact
+## 5. Contact
 - **Author**: Duong Nguyen
 - **Email**: nguyennamduong205@gmail.com
 - **GitHub**: [namduongit](https://github.com/namduongit)

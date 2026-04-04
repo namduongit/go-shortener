@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"url-shortener/internal/handler"
 	"url-shortener/internal/middleware"
 
@@ -20,7 +21,6 @@ func SetupRouter() *gin.Engine {
 	r.SetTrustedProxies(nil)
 
 	// Public routes
-	r.GET("/api/plans", handler.GetPlans)
 	r.POST("/auth/register", handler.Register)
 	r.POST("/auth/login", handler.Login)
 	r.GET("/auth/config", handler.AuthConfig)
@@ -28,6 +28,9 @@ func SetupRouter() *gin.Engine {
 
 	r.GET("/api/public/plans", handler.GetPlans)
 	r.GET("/api/public/images/:code", handler.GetImageFile)
+	r.GET("/api/public/urls/:code", func(c *gin.Context) {
+		fmt.Println("Hehe")
+	})
 
 	// Protected routes
 	protected := r.Group("/api/guard")
@@ -43,7 +46,7 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/files", handler.GetFiles)
 		protected.POST("/files", handler.UploadFile)
 		protected.DELETE("/files/:id", handler.DeleteFile)
-		protected.PATCH("/files/:id/folder", handler.MoveFile)
+		// protected.PATCH("/files/:id/folder", handler.MoveFile)
 
 		protected.GET("/urls", handler.GetUrls)
 		protected.POST("/urls", handler.CreateShortURL)
