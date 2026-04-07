@@ -13,6 +13,7 @@ import ProtectedRoute from './components/protected-route/protected-route'
 import PublicRoute from './components/public-route/public-route'
 import DashboardLayout from './components/layout/dashboard-layout'
 import HomePage from './pages/home/home'
+import PlanUsageProvider from './common/contexts/plan-usage'
 
 createRoot(document.getElementById('root')!).render(
   <NotificateProvider>
@@ -20,13 +21,21 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route element={<ProtectedRoute />}>
-            <Route element={<DashboardLayout />}>
+
+            <Route element={
+              <PlanUsageProvider>
+                <DashboardLayout />
+              </PlanUsageProvider>
+            }>
+
               <Route path="/page/urls" element={<UrlPage />} />
               <Route path="/page/files" element={<FilePage />} />
-              <Route path="/page/plan" element={<PlanPage />} />
+              <Route path="/page/plans" element={<PlanPage />} />
               <Route path="/page/account/info" element={<AccountInfoPage />} />
               <Route path="/page/account/api" element={<AccountApiPage />} />
+
             </Route>
+
           </Route>
 
           <Route element={<PublicRoute />}>

@@ -8,7 +8,7 @@ import { useExecute } from "../../../common/hooks/useExecute";
 import { useNotificate } from "../../../common/hooks/useNotificate";
 
 const inputClasses =
-	"mt-2 w-full rounded-xl border border-[#d9e1ef] bg-white px-4 py-3 text-sm text-[#202124] placeholder:text-[#80868b] transition focus:border-[#1a73e8] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/15";
+	"mt-2 w-full rounded-xl border border-gray-300/90 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 transition focus:border-[#1a73e8] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/15";
 
 
 const RegisterPage = () => {
@@ -53,16 +53,16 @@ const RegisterPage = () => {
 	return (
 		<PublicLayout>
 			<div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr]">
-				<section className="rounded-3xl border border-[#d9e1ef] bg-white p-6 shadow-[0_14px_40px_rgba(34,61,102,0.09)] md:p-10">
-					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5f6368]">Tạo tài khoản</p>
-					<h1 className="mt-3 text-4xl font-semibold text-[#202124] md:text-5xl">Bắt đầu với GMS Cloud</h1>
-					<p className="mt-4 text-sm leading-6 text-[#5f6368]">
+				<section className="rounded-3xl border border-gray-300/90 bg-white p-6 shadow-[0_14px_40px_rgba(34,61,102,0.09)] md:p-10">
+					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Tạo tài khoản</p>
+					<h1 className="mt-3 text-4xl font-semibold text-gray-900 md:text-5xl">Bắt đầu với GMS Cloud</h1>
+					<p className="mt-4 text-sm leading-6 text-gray-500">
 						Tạo tài khoản để dùng chung hệ thống quản lý file, URL, API và hồ sơ trong cùng một không gian.
 					</p>
 
-					<div className="mt-8 space-y-3 rounded-2xl border border-[#e5eaf4] bg-[#f8fbff] p-5">
-						<p className="text-sm font-semibold text-[#202124]">Điểm chính</p>
-						<ul className="space-y-2 text-sm text-[#5f6368]">
+					<div className="mt-8 space-y-3 rounded-2xl border border-gray-300/90 bg-[#f8fbff] p-5">
+						<p className="text-sm font-semibold text-gray-900">Điểm chính</p>
+						<ul className="space-y-2 text-sm text-gray-500">
 							<li>• Kiểu giao diện đồng bộ với dashboard bên trong.</li>
 							<li>• Tập trung vào file, folder, breadcrumb và thao tác tài khoản.</li>
 							<li>• Các bước tạo tài khoản ngắn, rõ và dễ tiếp cận.</li>
@@ -70,10 +70,10 @@ const RegisterPage = () => {
 					</div>
 				</section>
 
-				<section className="rounded-3xl border border-[#d9e1ef] bg-white p-6 shadow-[0_14px_40px_rgba(34,61,102,0.09)] md:p-10">
+				<section className="rounded-3xl border border-gray-300/90 bg-white p-6 shadow-[0_14px_40px_rgba(34,61,102,0.09)] md:p-10">
 					<form className="space-y-5" onSubmit={handleSubmit}>
 						<div>
-							<label className="text-sm font-semibold text-[#202124]" htmlFor="email">
+							<label className="text-sm font-semibold text-gray-900" htmlFor="email">
 								Email
 							</label>
 							<input
@@ -89,7 +89,7 @@ const RegisterPage = () => {
 						</div>
 
 						<div>
-							<label className="text-sm font-semibold text-[#202124]" htmlFor="password">
+							<label className="text-sm font-semibold text-gray-900" htmlFor="password">
 								Mật khẩu
 							</label>
 							<input
@@ -105,7 +105,7 @@ const RegisterPage = () => {
 						</div>
 
 						<div>
-							<label className="text-sm font-semibold text-[#202124]" htmlFor="confirmPassword">
+							<label className="text-sm font-semibold text-gray-900" htmlFor="confirmPassword">
 								Xác nhận mật khẩu
 							</label>
 							<input
@@ -120,20 +120,20 @@ const RegisterPage = () => {
 							/>
 						</div>
 
-						<p className="text-xs leading-relaxed text-[#5f6368]">
+						<p className="text-xs leading-relaxed text-gray-500">
 							Bằng cách tạo tài khoản, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của hệ thống.
 						</p>
 
 						<button
 							type="submit"
-							className="w-full rounded-full bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#175fc0]"
+							className="w-full rounded-full bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
 						>
 							Tạo tài khoản
 						</button>
 
-						<p className="text-center text-sm text-[#5f6368]">
+						<p className="text-center text-sm text-gray-500">
 							Đã có tài khoản?{' '}
-							<Link className="font-semibold text-[#1a73e8] hover:underline" to="/auth/login">
+							<Link className="font-semibold text-blue-500 hover:underline" to="/auth/login">
 								Đăng nhập
 							</Link>
 						</p>

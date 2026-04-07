@@ -15,13 +15,13 @@ export const AuthModule = {
         return response.data;
     },
 
-    async Config(){
-        const response = await api.get<RestResponse<ConfigResponse>>("/auth/config");
+    async Logout() {
+        const response = await api.post<RestResponse<LogoutResponse>>("/auth/logout");
         return response.data;
     },
 
-    async Logout(){
-        const response = await api.post<RestResponse<LogoutResponse>>("/auth/logout");
+    async Config() {
+        const response = await api.get<RestResponse<ConfigResponse>>("/api/guard/config");
         return response.data;
     }
 }

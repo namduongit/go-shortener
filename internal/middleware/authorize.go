@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 	"url-shortener/internal/config"
+	"url-shortener/internal/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 var jwtKey = []byte(config.GetConfig().JWTSecret)
@@ -41,34 +41,35 @@ func AuthMiddleware() gin.HandlerFunc {
 			tokenStr = parts[1]
 		}
 
-		token, err := jwt.ParseWithClaims(tokenStr, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
-		})
-
-		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, config.GinErrorResponse(
-				"Invalid or expired token",
-				config.RestFulInvalid,
-				config.RestFulCodeInvalid,
+		_, _, _, err := utils.VerifyToken(tokenStr, string(jwtKey))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+				err.Error(),
+				config.RestFulUnauthorized,
+				config.RestFulCodeUnauthorized,
 			))
 			return
 		}
 
-		// Print token claims for debugging
-		fmt.Printf("Token Claims: %+v\n", token.Claims)
-
-		accountID, ok := token.Claims.(jwt.MapClaims)["uid"].(float64)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, config.GinErrorResponse(
-				[]string{"Invalid token claims"},
-				config.RestFulInvalid,
-				config.RestFulCodeInvalid,
+		claims, err := utils.ParseToken(tokenStr, string(jwtKey))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+				err.Error(),
+				config.RestFulUnauthorized,
+				config.RestFulCodeUnauthorized,
 			))
 			return
 		}
 
-		fmt.Printf("Middleware - Authenticated with Account ID: %d\n", uint(accountID))
-		c.Set("accountID", uint(accountID))
+		accountUUID := claims["uuid"].(string)
+		accountID := uint(claims["id"].(float64))
+
+		c.Set("accountUUID", accountUUID)
+		c.Set("accountID", accountID)
+
+		fmt.Println("Request provide token with uuid has value is: ", claims["uuid"])
+		fmt.Println("Request provide token with id has value is: ", claims["id"])
+		fmt.Println(claims)
 
 		c.Next()
 	}

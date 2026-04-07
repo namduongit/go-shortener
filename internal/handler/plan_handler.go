@@ -25,7 +25,7 @@ func GetPlans(c *gin.Context) {
 	plansResponse := make([]response.PlanResponse, len(plans))
 	for i, plan := range plans {
 		plansResponse[i] = response.PlanResponse{
-			ID:           plan.ID,
+			UUID:         plan.UUID.String(),
 			Name:         plan.Name,
 			Price:        plan.Price,
 			StorageLimit: plan.StorageLimit,
@@ -37,6 +37,66 @@ func GetPlans(c *gin.Context) {
 		http.StatusOK,
 		config.GinResponse(
 			plansResponse,
+			config.RestFulSuccess,
+			nil,
+			config.RestFulCodeSuccess,
+		))
+}
+
+func ViewPlan(c *gin.Context) {
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
+		))
+		return
+	}
+
+	usedStorage, err := service.GetUsedStorageByAccountID(account.ID)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInternalError,
+				config.RestFulCodeInternalError,
+			))
+		return
+	}
+
+	usedURL, err := service.GetUsedURLCountByAccountID(account.ID)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInternalError,
+				config.RestFulCodeInternalError,
+			))
+		return
+	}
+
+	plan := account.Plan
+	response := response.MyPlanUsageResponse{
+		Plan: response.PlanResponse{
+			UUID:         plan.UUID.String(),
+			Name:         plan.Name,
+			Price:        plan.Price,
+			StorageLimit: plan.StorageLimit,
+			URLLimit:     plan.URLLimit,
+		},
+		TotalStorage: plan.StorageLimit,
+		UsedStorage:  usedStorage,
+		UsedURL:      usedURL,
+	}
+
+	c.JSON(
+		http.StatusOK,
+		config.GinResponse(
+			response,
 			config.RestFulSuccess,
 			nil,
 			config.RestFulCodeSuccess,

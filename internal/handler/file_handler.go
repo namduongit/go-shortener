@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
 	"url-shortener/internal/model/response"
@@ -15,8 +14,18 @@ import (
 )
 
 func GetFiles(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
+		))
+		return
+	}
+
+	files, err := service.GetFilesFromAccountID(account.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
@@ -26,43 +35,36 @@ func GetFiles(c *gin.Context) {
 		return
 	}
 
-	files, err := service.GetFilesByAccountID(accountID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			[]string{"Cannot fetch files"},
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
-		))
-		return
-	}
-
 	fileResponse := make([]response.FileResponse, len(files))
 	for i, file := range files {
-		folderName := "root"
-		var folderID *uint
 
-		if file.FolderID != nil {
-			folderID = file.FolderID
-		}
+		folderName := "root"
+		var folderUUID *string
+
 		if file.Folder != nil {
+			uuidStr := file.Folder.UUID.String()
+
 			folderName = file.Folder.Name
-			folderID = &file.Folder.ID
+			folderUUID = &uuidStr
+		} else {
+			folderUUID = nil
 		}
+
 		fileResponse[i] = response.FileResponse{
-			ID:          file.ID,
+			UUID:        file.UUID.String(),
 			FileName:    file.FileName,
 			FileType:    string(file.FileType),
 			ContentType: file.ContentType,
 			Size:        file.Size,
+			FolderUUID:  folderUUID,
 			FolderName:  folderName,
-			FolderID:    folderID,
-			UploadedAt:  file.CreatedAt,
+			UploadedAt:  file.UploadedAt,
 		}
 	}
 
 	response := response.FileListResponse{
-		OwnerID: accountID,
-		Files:   fileResponse,
+		OwnerUUID: account.UUID.String(),
+		Files:     fileResponse,
 	}
 
 	c.JSON(http.StatusOK, config.GinResponse(
@@ -74,32 +76,46 @@ func GetFiles(c *gin.Context) {
 }
 
 func UploadFile(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	account, err := service.GetAccountByID(accountID)
-
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
-		))
-		return
-	}
-
-	if err := service.PreloadPlanForAccount(account); err != nil {
-		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
 		))
 		return
 	}
 
 	fileHeader, err := c.FormFile("file")
-	folderID := c.PostForm("folderID")
+	folderUUIDInput := c.PostForm("folder")
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			config.InvalidRequestBody,
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
+
+	if !service.IVerifyServiceStore(account, fileHeader) {
+		c.JSON(http.StatusForbidden, config.GinErrorResponse(
+			config.StorageLimitExceeded,
+			config.RestFulForbidden,
+			config.RestFulCodeForbidden,
+		))
+		return
+	}
+
+	file, err := service.CreateFile(
+		c.Request.Context(),
+		account.ID,
+		fileHeader,
+		folderUUIDInput,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
 			config.RestFulInvalid,
 			config.RestFulCodeInvalid,
@@ -107,29 +123,31 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	file, err := service.PushFileToCloud(c.Request.Context(), accountID, fileHeader, folderID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
-		))
-		return
+	folderName := "root"
+	var folderUUID *string
+
+	if file.Folder != nil {
+		uuidStr := file.Folder.UUID.String()
+
+		folderName = file.Folder.Name
+		folderUUID = &uuidStr
+	} else {
+		folderUUID = nil
 	}
 
-	respnse := response.FileResponse{
-		ID:          file.ID,
+	response := response.FileResponse{
+		UUID:        file.UUID.String(),
 		FileName:    file.FileName,
 		FileType:    string(file.FileType),
 		ContentType: file.ContentType,
 		Size:        file.Size,
-		FolderID:    file.FolderID,
-
-		UploadedAt: file.CreatedAt,
+		FolderUUID:  folderUUID,
+		FolderName:  folderName,
+		UploadedAt:  file.CreatedAt,
 	}
 
 	c.JSON(http.StatusOK, config.GinResponse(
-		respnse,
+		response,
 		config.RestFulSuccess,
 		nil,
 		config.RestFulCodeSuccess,
@@ -140,17 +158,7 @@ func UploadFile(c *gin.Context) {
 func GetImageFile(c *gin.Context) {
 	code := c.Param("code")
 
-	fileID, err := strconv.ParseUint(code, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInvalid,
-			config.RestFulCodeInvalid,
-		))
-		return
-	}
-
-	file, err := service.GetFileByID(uint(fileID))
+	file, err := service.GetFileByUUID(code)
 	if err != nil || file == nil {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
 			config.FileNotExists,
@@ -178,6 +186,7 @@ func GetImageFile(c *gin.Context) {
 		))
 		return
 	}
+
 	stat, err := object.Stat()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
@@ -206,53 +215,26 @@ type MoveFileRequest struct {
 	FolderID *uint `json:"folder_id"`
 }
 
-func MoveFile(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+func DeleteFile(c *gin.Context) {
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
 		))
 		return
 	}
 
-	fileID64, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	fileUUID := c.Param("uuid")
+
+	err = service.DeleteFileByUUID(c.Request.Context(), account.ID, fileUUID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			"Invalid file id",
-			config.RestFulInvalid,
-			config.RestFulCodeInvalid,
-		))
-		return
-	}
-
-	var req MoveFileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			config.InvalidRequestBody,
-			config.RestFulInvalid,
-			config.RestFulCodeInvalid,
-		))
-		return
-	}
-
-	err = service.MoveFileToFolder(accountID, uint(fileID64), req.FolderID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not exists") {
-			c.JSON(http.StatusNotFound, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulNotFound,
-				config.RestFulCodeNotFound,
-			))
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+		c.JSON(http.StatusNotFound, config.GinErrorResponse(
 			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.RestFulNotFound,
+			config.RestFulCodeNotFound,
 		))
 		return
 	}
@@ -265,9 +247,30 @@ func MoveFile(c *gin.Context) {
 	))
 }
 
-func DeleteFile(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+func DownloadFile(c *gin.Context) {
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
+		))
+		return
+	}
+
+	fileUUID := c.Param("uuid")
+	file, err := service.GetFileByUUIDAndAccountID(fileUUID, account.ID)
+	if err != nil || file == nil {
+		c.JSON(http.StatusNotFound, config.GinErrorResponse(
+			config.FileNotExists,
+			config.RestFulNotFound,
+			config.RestFulCodeNotFound,
+		))
+		return
+	}
+
+	object, err := service.GetImageURL(c.Request.Context(), file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
@@ -277,27 +280,8 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	fileID64, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	stat, err := object.Stat()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			"Invalid file id",
-			config.RestFulInvalid,
-			config.RestFulCodeInvalid,
-		))
-		return
-	}
-
-	err = service.DeleteFileByID(c.Request.Context(), accountID, uint(fileID64))
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not exists") {
-			c.JSON(http.StatusNotFound, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulNotFound,
-				config.RestFulCodeNotFound,
-			))
-			return
-		}
-
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
 			config.RestFulInternalError,
@@ -306,10 +290,22 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, config.GinResponse(
-		nil,
-		config.RestFulSuccess,
-		nil,
-		config.RestFulCodeSuccess,
-	))
+	contentType := stat.ContentType
+	if contentType == "" {
+		contentType = file.ContentType
+	}
+
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Length", strconv.FormatInt(stat.Size, 10))
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%q", file.FileName))
+
+	_, err = io.Copy(c.Writer, object)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+			err.Error(),
+			config.RestFulInternalError,
+			config.RestFulCodeInternalError,
+		))
+		return
+	}
 }

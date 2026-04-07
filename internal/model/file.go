@@ -1,6 +1,11 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type FileType string
 
@@ -14,6 +19,8 @@ const (
 type File struct {
 	gorm.Model
 
+	UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+
 	FileName    string
 	FileType    FileType `gorm:"default:'private'"`
 	ContentType string
@@ -24,4 +31,6 @@ type File struct {
 
 	FolderID *uint   `gorm:"index"`
 	Folder   *Folder `gorm:"foreignKey:FolderID;references:ID"`
+
+	UploadedAt time.Time `gorm:"autoCreateTime"`
 }

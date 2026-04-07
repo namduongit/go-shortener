@@ -1,7 +1,9 @@
 package router
 
 import (
-	"fmt"
+	"net/url"
+	"strings"
+	"url-shortener/internal/config"
 	"url-shortener/internal/handler"
 	"url-shortener/internal/middleware"
 
@@ -11,8 +13,10 @@ import (
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
+	cfg := config.GetConfig()
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     []string{cfg.ClientHost},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -23,35 +27,95 @@ func SetupRouter() *gin.Engine {
 	// Public routes
 	r.POST("/auth/register", handler.Register)
 	r.POST("/auth/login", handler.Login)
-	r.GET("/auth/config", handler.AuthConfig)
 	r.POST("/auth/logout", handler.Logout)
 
 	r.GET("/api/public/plans", handler.GetPlans)
 	r.GET("/api/public/images/:code", handler.GetImageFile)
-	r.GET("/api/public/urls/:code", func(c *gin.Context) {
-		fmt.Println("Hehe")
-	})
+	// Endpoint configuration from environment
 
 	// Protected routes
 	protected := r.Group("/api/guard")
 	protected.Use(middleware.AuthMiddleware())
 	{
+		protected.GET("/file/:uuid/download", handler.DownloadFile)
+		protected.GET("/url/:code/direct", handler.DirectURL)
+
+		protected.GET("/config", handler.AuthConfig)
+
 		protected.GET("/profile", handler.GetProfile)
 		protected.PUT("/profile", handler.UpdateProfile)
 
-		protected.GET("/folders", handler.GetFolders)
-		protected.POST("/folders", handler.CreateFolder)
-		protected.DELETE("/folders/:id", handler.DeleteFolder)
+		protected.GET("/plans", handler.ViewPlan)
 
-		protected.GET("/files", handler.GetFiles)
-		protected.POST("/files", handler.UploadFile)
-		protected.DELETE("/files/:id", handler.DeleteFile)
-		// protected.PATCH("/files/:id/folder", handler.MoveFile)
+		/* Folder routes */
+		protected.GET(
+			"/folders",
+			handler.GetFolders,
+		)
+		protected.POST(
+			"/folders",
+			handler.CreateFolder,
+		)
+		protected.DELETE(
+			"/folders/:uuid",
+			handler.DeleteFolder,
+		)
 
-		protected.GET("/urls", handler.GetUrls)
-		protected.POST("/urls", handler.CreateShortURL)
-		protected.DELETE("/urls/:id", handler.DeleteURL)
+		/* File routes */
+		protected.GET(
+			"/files",
+			handler.GetFiles,
+		)
+		protected.POST(
+			"/files",
+			handler.UploadFile,
+		)
+		protected.DELETE(
+			"/files/:uuid",
+			handler.DeleteFile,
+		)
+
+		/* URL routes */
+		protected.GET(
+			"/urls",
+			handler.GetUrls,
+		)
+		protected.POST(
+			"/urls",
+			handler.CreateShortURL,
+		)
+		protected.DELETE(
+			"/urls/:uuid",
+			handler.DeleteURL,
+		)
 	}
 
 	return r
+}
+
+func normalizeEndpointPath(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	if strings.HasPrefix(raw, "/") {
+		return strings.TrimRight(raw, "/")
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+
+	path := strings.TrimSpace(u.Path)
+	if path == "" || path == "/" {
+		return ""
+	}
+
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	return strings.TrimRight(path, "/")
 }

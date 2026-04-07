@@ -1,9 +1,14 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type Profile struct {
 	gorm.Model
+
+	UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
 
 	Username    string `gorm:"uniqueIndex"`
 	AvatarURL   string

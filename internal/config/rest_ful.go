@@ -55,11 +55,17 @@ type ErrorMessageExmaple string
 const (
 	// HTTP body
 	InvalidRequestBody ErrorMessageExmaple = "Invalid request body"
+	// UnAuthorize
+	Unauthorize ErrorMessageExmaple = "Unauthorize"
 
-	// File
-	FileNotExists ErrorMessageExmaple = "File not exists"
-	FileNotImage  ErrorMessageExmaple = "File is not an image"
+	FileNotExists   ErrorMessageExmaple = "File not exists"
+	URLNotExists    ErrorMessageExmaple = "URL not exists"
+	FolderNotExists ErrorMessageExmaple = "Folder not exists"
 
-	// Folder
+	FileNotImage ErrorMessageExmaple = "File is not an image"
+
+	StorageLimitExceeded ErrorMessageExmaple = "Storage limit exceeded"
+	URLLimitExceeded     ErrorMessageExmaple = "URL limit exceeded"
+
 	FolderNameExists ErrorMessageExmaple = "Folder name already exists"
 )

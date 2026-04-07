@@ -1,6 +1,9 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 /*
 - Price is VND unit
@@ -9,8 +12,10 @@ import "gorm.io/gorm"
 type Plan struct {
 	gorm.Model
 
+	UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+
 	Name         string
-	Price        int
+	Price        int64
 	StorageLimit int64
 	URLLimit     int64
 

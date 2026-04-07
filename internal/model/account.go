@@ -1,19 +1,24 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type Role string
 
 const (
-	RoleUser  Role = "user"
+	RoleUser  Role = "none"
 	RoleAdmin Role = "admin"
 )
 
 type Account struct {
 	gorm.Model
 
+	UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+
 	Email    string `gorm:"unique"`
-	Role     Role   `gorm:"default:'user'"`
+	Role     Role   `gorm:"default:'none'"`
 	Password string
 
 	// One-to-One relationship with Profile

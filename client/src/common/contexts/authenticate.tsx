@@ -5,8 +5,9 @@ import type { ConfigResponse, LoginResponse, RegisterResponse } from "../../serv
 
 type AuthState = LoginResponse | RegisterResponse;
 interface AuthenticateContexType {
-    state: AuthState;
+    state: AuthState | undefined;
     saveState: (state: AuthState) => void;
+    clearState: () => void;
     authConfig: boolean;
     checkingAuth: boolean;
 }
@@ -14,9 +15,9 @@ interface AuthenticateContexType {
 const AuthenticateContext = createContext<AuthenticateContexType | undefined>(undefined);
 
 const AuthenticateProvider = ({ children }: { children: React.ReactNode }) => {
-    const { Config } = AuthModule;
+    const { Config, Logout } = AuthModule;
 
-    const [state, setState] = useState<AuthState>({ email: "", role: "", plan_name: "" });
+    const [state, setState] = useState<AuthState | undefined>(undefined);
 
     const [authConfig, setAuthConfig] = useState<boolean>(false);
     const [initialized, setInitialized] = useState<boolean>(false);
@@ -24,41 +25,43 @@ const AuthenticateProvider = ({ children }: { children: React.ReactNode }) => {
 
     const saveState = (state: AuthState) => {
         localStorage.setItem("GO_ACCOUNT", JSON.stringify(state));
+        setState(state);
         setAuthConfig(true);
     }
+
+    const clearState = () => {
+        localStorage.removeItem("GO_ACCOUNT");
+        setState(undefined);
+        setAuthConfig(false);
+    };
 
     const validateSession = useCallback(async () => {
         const local = localStorage.getItem("GO_ACCOUNT");
         if (local) {
-            const parsed: AuthState = JSON.parse(local);
-            if (parsed) {
-                if (!parsed.email || !parsed.role || !parsed.plan_name) {
-                    void AuthModule.Logout();
-                    setAuthConfig(false);
-                    localStorage.removeItem("GO_ACCOUNT");
-                    return false;
-                }
+            let parsed: AuthState;
+            try {
+                parsed = JSON.parse(local) as AuthState;
+            } catch {
+                clearState();
+                return;
+            }
 
+            if (parsed.uuid && parsed.email && parsed.plan) {
+                // Check if session is still valid
                 await execute(() => Config(), {
-                    onSuccess: (config: ConfigResponse) => {
-                       setState(parsed);
-                       setAuthConfig(config.is_authenticated);
+                    onSuccess: () => {
+                        setState(parsed);
+                        setAuthConfig(true);
                     },
-                    onError: () => {
-                        setAuthConfig(false);
-                        localStorage.removeItem("GO_ACCOUNT");
-                        void AuthModule.Logout();
+                    onError: async () => {
+                        await Logout();
+                        clearState();
                     }
-                });
-
-                return false;
+                })
             }
         }
 
-        setAuthConfig(false);
         setInitialized(true);
-        return false;
-
     }, []);
 
     useEffect(() => {
@@ -74,7 +77,7 @@ const AuthenticateProvider = ({ children }: { children: React.ReactNode }) => {
     }, [validateSession]);
 
     return (
-        <AuthenticateContext.Provider value={{ state, saveState, authConfig, checkingAuth: !initialized || loading }}>
+        <AuthenticateContext.Provider value={{ state, saveState, clearState, authConfig, checkingAuth: !initialized || loading }}>
             {children}
         </AuthenticateContext.Provider>
     );

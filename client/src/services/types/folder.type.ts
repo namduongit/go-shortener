@@ -3,14 +3,16 @@ export type CreateFolderForm = {
 }
 
 export type FolderResponse = {
-    id: number;
+    uuid: string;
+    
     name: string;
     total_files: number;
+    total_size: number;
 
-    created_at: string;
+    created_at: Date;
 }
 
 export type FolderListResponse = {
-    owner_id: number;
+    owner_uuid: string;
     folders: FolderResponse[];
 }

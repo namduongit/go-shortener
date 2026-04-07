@@ -1,17 +1,30 @@
 package response
 
+type PlanDetailResponse struct {
+	UUID         string `json:"uuid"`
+	Name         string `json:"name"`
+	StorageLimit int64  `json:"storage_limit"`
+}
+
 type LoginResponse struct {
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-	PlanName string `json:"plan_name"`
+	UUID  string             `json:"uuid"`
+	Email string             `json:"email"`
+	Plan  PlanDetailResponse `json:"plan"`
 }
 
 type RegisterResponse struct {
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-	PlanName string `json:"plan_name"`
+	UUID  string             `json:"uuid"`
+	Email string             `json:"email"`
+	Plan  PlanDetailResponse `json:"plan"`
 }
 
-type AuthConfigResponse struct {
-	IsAuthenticated bool `json:"is_authenticated"`
+type ConfigDetailResponse struct {
+	IsValid   bool  `json:"is_valid"`
+	IssueAt   int64 `json:"issue_at"`
+	ExpiresIn int64 `json:"expires_in"`
+}
+type ConfigResponse struct {
+	UUID   string               `json:"uuid"`
+	Email  string               `json:"email"`
+	Config ConfigDetailResponse `json:"config"`
 }

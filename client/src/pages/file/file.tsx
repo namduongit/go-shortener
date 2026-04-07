@@ -4,35 +4,32 @@ import { FolderModule } from "../../services/modules/folder.module";
 import CreateFolderModal from "../../components/ui/modal/create-folder/create-folder-modal";
 import CreateFileModal from "../../components/ui/modal/create-file/create-file-modal";
 import { useExecute } from "../../common/hooks/useExecute";
-import { formatDate } from "../../services/utils/date";
 import type { FileListResponse, FileResponse } from "../../services/types/file.type";
 import type { FolderListResponse, FolderResponse } from "../../services/types/folder.type";
+import { usePlanUsage } from "../../common/hooks/usePlanUsage";
+import { normalizeFolderName } from "../../services/utils/folder";
 import { useNotificate } from "../../common/hooks/useNotificate";
+import SideFile from "../../components/ui/sidefile/sidefile";
+import FilePageHero from "../../components/ui/file-page/file-page-hero";
+import FileBreadcrumb from "../../components/ui/file-page/file-breadcrumb";
+import FileSearchToolbar from "../../components/ui/file-page/file-search-toolbar";
+import FileExplorer from "../../components/ui/file-page/file-explorer";
+import UploadTargetBanner from "../../components/ui/file-page/upload-target-banner";
 
-const normalizeFolderName = (folderName?: string | null): string => {
-    const value = folderName?.trim();
-    return value ? value : "root";
-};
-
-const formatFileSize = (size: number) => {
-    if (size < 1024) {
-        return `${size} B`;
-    }
-    if (size < 1024 * 1024) {
-        return `${(size / 1024).toFixed(1)} KB`;
-    }
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-};
+const DEFAULT_ITEMS_PER_PAGE = 5;
+const ROW_MIN_HEIGHT_PX = 60;
 
 const FilePage = () => {
-    const { GetFiles, UploadFile, DeleteFile, DownloadFile } = FileModule;
+    const { GetFiles, UploadFile } = FileModule;
     const { GetFolders, CreateFolder } = FolderModule;
+
     const { execute: executeGetFiles, loading } = useExecute<FileListResponse>();
     const { execute: executeGetFolders } = useExecute<FolderListResponse>();
 
     const { execute: executeCreateFolder } = useExecute<FolderResponse>();
-    const { execute: executeUpload } = useExecute<FileResponse>();
-    const { execute: executeDelete } = useExecute<null>();
+    const { execute: executeUpload, loading: uploading } = useExecute<FileResponse>();
+
+    const { refreshPlanUsage } = usePlanUsage();
     const { showToast } = useNotificate();
 
     const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
@@ -42,21 +39,22 @@ const FilePage = () => {
     const [customFolders, setCustomFolders] = useState<FolderResponse[]>([]);
 
     const [path, setPath] = useState<string[]>([]);
-    const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+    const [itemsPerPage, setItemsPerPage] = useState<number>(DEFAULT_ITEMS_PER_PAGE);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [searchInput, setSearchInput] = useState<string>("");
     const [searchKeyword, setSearchKeyword] = useState<string>("");
     const [selectedFile, setSelectedFile] = useState<FileResponse | null>(null);
+    const [uploadingFileName, setUploadingFileName] = useState<string>("");
 
     const currentFolder = path.length ? path[path.length - 1] : null;
 
     const folderNameById = useMemo(() => {
-        return new Map(customFolders.map((folder) => [folder.id, folder.name.trim()]));
+        return new Map(customFolders.map((folder) => [folder.uuid, folder.name.trim()]));
     }, [customFolders]);
 
     const resolveFileFolderName = useCallback((file: FileResponse): string => {
-        if (typeof file.folder_id === "number") {
-            const folderName = folderNameById.get(file.folder_id);
+        if (typeof file.folder_uuid === "string" && file.folder_uuid.trim()) {
+            const folderName = folderNameById.get(file.folder_uuid);
             if (folderName) {
                 return folderName;
             }
@@ -135,7 +133,7 @@ const FilePage = () => {
         const keyword = searchKeyword.trim().toLowerCase();
 
         const baseFiles = !currentFolder
-            ? files
+            ? files.filter((item) => normalizeFolderName(resolveFileFolderName(item)) === "root")
             : files.filter((item) => normalizeFolderName(resolveFileFolderName(item)) === normalizeFolderName(currentFolder));
 
         if (!keyword) {
@@ -154,7 +152,7 @@ const FilePage = () => {
     const explorerItems = useMemo(() => {
         const fileItems = visibleFiles.map((file) => ({
             kind: "file" as const,
-            key: `file-${file.id}`,
+            key: `file-${file.uuid}`,
             file,
         }));
 
@@ -169,6 +167,7 @@ const FilePage = () => {
 
     const totalItems = explorerItems.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    const tableViewportRows = itemsPerPage + 1;
 
     const paginatedItems = useMemo(() => {
         const start = (currentPage - 1) * itemsPerPage;
@@ -196,7 +195,7 @@ const FilePage = () => {
             return;
         }
 
-        const stillExists = files.some((file) => file.id === selectedFile.id);
+        const stillExists = files.some((file) => file.uuid === selectedFile.uuid);
         if (!stillExists) {
             setSelectedFile(null);
         }
@@ -206,16 +205,10 @@ const FilePage = () => {
         await executeCreateFolder(
             () => CreateFolder({ name: folderName }),
             {
-                onSuccess: () => {
-                    setCustomFolders((prev) => [
-                        {
-                            id: Date.now(),
-                            name: folderName,
-                            total_files: 0,
-                            created_at: new Date().toISOString(),
-                        },
-                        ...prev,
-                    ]);
+                onSuccess: (data) => {
+                    if (data) {
+                        setCustomFolders((prev) => [data, ...prev.filter((item) => item.uuid !== data.uuid)]);
+                    }
                     showToast({
                         type: "success",
                         title: "Đã tạo thư mục",
@@ -234,22 +227,27 @@ const FilePage = () => {
     };
 
     const handleUpload = async (selectedFile: File) => {
-        const selectedFolderId =
-            customFolders.find((folder) => folder.name.trim() === (currentFolder ?? "").trim())?.id ?? 0;
+        setUploadingFileName(selectedFile.name);
+        setIsCreateFileOpen(false);
+
+        const selectedFolder =
+            customFolders.find((folder) => folder.name.trim() === (currentFolder ?? "").trim())?.uuid;
 
         await executeUpload(
-            () => UploadFile({ file: selectedFile, folderID: selectedFolderId }),
+            () => UploadFile({ file: selectedFile, folder: selectedFolder }),
             {
                 onSuccess: () => {
-                    setIsCreateFileOpen(false);
+                    setUploadingFileName("");
                     showToast({
                         type: "success",
                         title: "Upload thành công",
                         message: `File ${selectedFile.name} đã được tải lên.`,
                     });
                     void loadFiles();
+                    void refreshPlanUsage();
                 },
                 onError: () => {
+                    setUploadingFileName("");
                     showToast({
                         type: "error",
                         title: "Upload thất bại",
@@ -275,295 +273,81 @@ const FilePage = () => {
         });
     };
 
-    const handleDownloadFile = async (file: FileResponse) => {
-        try {
-            const blob = await DownloadFile(file.id);
-            const objectUrl = window.URL.createObjectURL(blob);
-            const anchor = document.createElement("a");
-            anchor.href = objectUrl;
-            anchor.download = file.file_name;
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-            window.URL.revokeObjectURL(objectUrl);
-        } catch {
-            showToast({
-                type: "error",
-                title: "Tải file thất bại",
-                message: "Không thể tải file này vào lúc này.",
-            });
-        }
+    const handleGoRoot = () => {
+        setPath([]);
     };
 
-    const handleDeleteFile = async (file: FileResponse) => {
-        const confirmDelete = window.confirm(`Bạn có chắc muốn xóa file ${file.file_name}?`);
-        if (!confirmDelete) {
-            return;
-        }
+    const handleGoPath = (index: number) => {
+        setPath(path.slice(0, index + 1));
+    };
 
-        const deleted = await executeDelete(
-            () => DeleteFile(file.id),
-            {
-                onSuccess: () => {
-                    showToast({
-                        type: "success",
-                        title: "Đã xóa file",
-                        message: `${file.file_name} đã được xóa.`,
-                    });
-                },
-                onError: () => {
-                    showToast({
-                        type: "error",
-                        title: "Xóa file thất bại",
-                        message: "Không thể xóa file. Vui lòng thử lại.",
-                    });
-                },
-            }
-        );
+    const handleToggleSelectedFile = (file: FileResponse) => {
+        setSelectedFile((prev) => (prev?.uuid === file.uuid ? null : file));
+    };
 
-        if (typeof deleted !== "undefined") {
-            setSelectedFile((prev) => (prev?.id === file.id ? null : prev));
-            await loadFiles();
-        }
+    const handleOpenFolder = (folderName: string) => {
+        setPath([folderName]);
+    };
+
+    const handlePreviousPage = () => {
+        setCurrentPage((prev) => Math.max(prev - 1, 1));
+    };
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => Math.min(prev + 1, totalPages));
     };
 
     return (
         <div className="space-y-5">
-            <header className="rounded-3xl border border-[#e3e8f2] bg-[#f8fbff] p-5 md:p-7">
-                <p className="text-sm font-semibold text-[#5f6368]">Quản lý file</p>
-                <h1 className="mt-1 text-3xl font-semibold text-[#202124] md:text-4xl">Không gian lưu trữ GMS</h1>
-                <p className="mt-2 text-sm text-[#5f6368]">Tổ chức file theo thư mục hoặc để trực tiếp ở root giống Google Drive.</p>
-                <div className="mt-5 flex flex-col gap-3 md:flex-row">
-                    <button
-                        className="rounded-full border border-[#d4dded] bg-white px-5 py-2 text-sm font-semibold text-[#1a73e8] transition hover:bg-[#edf3fe]"
-                        onClick={() => setIsCreateFolderOpen(true)}
-                    >
-                        Tạo thư mục
-                    </button>
-                    <button
-                        className="rounded-full bg-[#1a73e8] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#175fc0]"
-                        onClick={() => setIsCreateFileOpen(true)}
-                    >
-                        Tải tệp lên
-                    </button>
-                </div>
-            </header>
+            <FilePageHero
+                onOpenCreateFolder={() => setIsCreateFolderOpen(true)}
+                onOpenUploadFile={() => setIsCreateFileOpen(true)}
+            />
 
-            <section className="rounded-3xl border border-[#e3e8f2] bg-white p-4 md:p-6">
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#e5eaf4] bg-[#fafbfd] px-4 py-3 text-sm text-[#5f6368]">
-                    <button
-                        className="rounded-lg px-2 py-1 font-semibold text-[#1a73e8] hover:bg-[#e8f0fe]"
-                        onClick={() => setPath([])}
-                    >
-                        GMS Cloud
-                    </button>
-                    {path.map((item, index) => (
-                        <div key={item} className="flex items-center gap-2">
-                            <span>/</span>
-                            <button
-                                className="rounded-lg px-2 py-1 font-semibold text-[#1a73e8] hover:bg-[#e8f0fe]"
-                                onClick={() => setPath(path.slice(0, index + 1))}
-                            >
-                                {item}
-                            </button>
-                        </div>
-                    ))}
-                </div>
+            <section className="space-y-4">
+                <FileBreadcrumb path={path} onGoRoot={handleGoRoot} onGoPath={handleGoPath} />
 
-                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#e5eaf4] bg-[#fafbfd] px-4 py-3 md:flex-row md:items-center md:justify-between">
-                    <div className="flex w-full items-center gap-2 md:max-w-xl">
-                        <div className="flex h-10 w-full items-center gap-2 rounded-xl border border-[#d9e1ef] bg-white px-3">
-                            <i className="fa-solid fa-magnifying-glass text-xs text-[#5f6368]"></i>
-                            <input
-                                type="text"
-                                value={searchInput}
-                                onChange={(event) => setSearchInput(event.target.value)}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter") {
-                                        handleSearch();
-                                    }
-                                }}
-                                placeholder="Tìm theo tên file, thư mục, loại file"
-                                className="w-full bg-transparent text-sm text-[#202124] outline-none placeholder:text-[#8b939e]"
-                            />
-                        </div>
-                        <button
-                            className="rounded-xl border border-[#d9e1ef] bg-white px-3 py-2 text-sm font-semibold text-[#202124] transition hover:bg-[#f4f7fc]"
-                            onClick={handleSearch}
-                        >
-                            Tìm
-                        </button>
-                    </div>
-
-                    <button
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d9e1ef] bg-white px-3 py-2 text-sm font-semibold text-[#202124] transition hover:bg-[#f4f7fc]"
-                        onClick={() => void handleReload()}
-                    >
-                        <i className="fa-solid fa-rotate-right text-xs"></i>
-                        Reload
-                    </button>
-                </div>
+                <FileSearchToolbar
+                    searchInput={searchInput}
+                    onSearchInputChange={setSearchInput}
+                    onSearch={handleSearch}
+                    onReload={handleReload}
+                />
 
                 <div className={`mt-5 grid gap-4 ${selectedFile ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "lg:grid-cols-1"}`}>
-                    <div className="overflow-hidden rounded-2xl border border-[#e5eaf4] bg-white">
-                    <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#fafbfd] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#5f6368]">
-                        <span>Tệp và thư mục</span>
-                        <span>{currentFolder ?? "GMS Cloud"}</span>
-                    </div>
-
-                    <div className="divide-y divide-[#eef2f7]">
-                        {paginatedItems.map((item) => {
-                            if (item.kind === "file") {
-                                return (
-                                    <button
-                                        key={item.key}
-                                        className={`flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-[#f8fbff] ${selectedFile?.id === item.file.id ? "bg-[#eef4ff]" : "bg-white"}`}
-                                        onClick={() =>
-                                            setSelectedFile((prev) => (prev?.id === item.file.id ? null : item.file))
-                                        }
-                                    >
-                                        <div className="min-w-0 flex items-center gap-3">
-                                            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e8f0fe] text-[#1a73e8]">
-                                                <i className="fa-regular fa-file"></i>
-                                            </span>
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm font-semibold text-[#202124]">{item.file.file_name}</p>
-                                                <p className="truncate text-xs text-[#5f6368]">
-                                                    {item.file.file_type} · {formatFileSize(item.file.size)} · {formatDate(item.file.uploaded_at)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <span className="ml-4 shrink-0 text-xs text-[#5f6368]">{resolveFileFolderName(item.file)}</span>
-                                    </button>
-                                );
-                            }
-
-                            return (
-                                <button
-                                    key={item.key}
-                                    className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-[#f8fbff]"
-                                    onClick={() => setPath([item.folderName])}
-                                >
-                                    <div className="min-w-0 flex items-center gap-3">
-                                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#fff6df] text-[#b26a00]">
-                                            <i className="fa-solid fa-folder"></i>
-                                        </span>
-                                        <p className="truncate text-sm font-semibold text-[#202124]">{item.folderName}</p>
-                                    </div>
-                                    <span className="ml-4 shrink-0 text-xs text-[#5f6368]">Mở</span>
-                                </button>
-                            );
-                        })}
-
-                        {!loading && totalItems === 0 && (
-                            <div className="px-4 py-10 text-center text-sm text-[#5f6368]">
-                                Chưa có dữ liệu trong vị trí này.
-                            </div>
-                        )}
-                    </div>
-
-                    {totalItems > 0 && (
-                        <div className="flex flex-col items-start justify-between gap-3 border-t border-[#eef2f7] bg-[#fafbfd] px-4 py-3 text-sm text-[#5f6368] md:flex-row md:items-center">
-                            <div className="flex items-center gap-2">
-                                <span>Hiển thị</span>
-                                <select
-                                    value={itemsPerPage}
-                                    onChange={(event) => setItemsPerPage(Number(event.target.value))}
-                                    className="rounded-lg border border-[#d9e1ef] bg-white px-2 py-1 text-sm text-[#202124] outline-none"
-                                >
-                                    {[5, 10, 15, 20].map((size) => (
-                                        <option key={size} value={size}>
-                                            {size}
-                                        </option>
-                                    ))}
-                                </select>
-                                <span>/ trang</span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className="rounded-lg border border-[#d9e1ef] bg-white px-3 py-1 text-sm font-semibold text-[#202124] disabled:cursor-not-allowed disabled:opacity-50"
-                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    Trước
-                                </button>
-                                <span className="text-sm text-[#5f6368]">
-                                    Trang {currentPage}/{totalPages}
-                                </span>
-                                <button
-                                    className="rounded-lg border border-[#d9e1ef] bg-white px-3 py-1 text-sm font-semibold text-[#202124] disabled:cursor-not-allowed disabled:opacity-50"
-                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    Sau
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    </div>
+                    <FileExplorer
+                        currentFolder={currentFolder}
+                        tableViewportRows={tableViewportRows}
+                        rowMinHeight={ROW_MIN_HEIGHT_PX}
+                        paginatedItems={paginatedItems}
+                        selectedFile={selectedFile}
+                        resolveFileFolderName={resolveFileFolderName}
+                        onToggleFile={handleToggleSelectedFile}
+                        onOpenFolder={handleOpenFolder}
+                        loading={loading}
+                        totalItems={totalItems}
+                        itemsPerPage={itemsPerPage}
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onItemsPerPageChange={setItemsPerPage}
+                        onPreviousPage={handlePreviousPage}
+                        onNextPage={handleNextPage}
+                    />
 
                     {selectedFile && (
-                    <aside className="rounded-2xl border border-[#e5eaf4] bg-white p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#5f6368]">Chi tiết file</p>
-
-                            <div className="mt-4 space-y-4">
-                                <div className="rounded-2xl border border-[#e5eaf4] bg-[#fafbfd] p-4">
-                                    <p className="truncate text-sm font-semibold text-[#202124]">{selectedFile.file_name}</p>
-                                    <p className="mt-1 text-xs text-[#5f6368]">{selectedFile.content_type}</p>
-                                </div>
-
-                                <div className="space-y-2 text-sm text-[#5f6368]">
-                                    <p>
-                                        <span className="font-semibold text-[#202124]">Loại:</span> {selectedFile.file_type}
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold text-[#202124]">Dung lượng:</span> {formatFileSize(selectedFile.size)}
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold text-[#202124]">Ngày tải:</span> {formatDate(selectedFile.uploaded_at)}
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold text-[#202124]">Vị trí:</span> {resolveFileFolderName(selectedFile)}
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-col gap-2 pt-2">
-                                    <button
-                                        className="rounded-xl bg-[#1a73e8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#175fc0]"
-                                        onClick={() => void handleDownloadFile(selectedFile)}
-                                    >
-                                        Tải xuống
-                                    </button>
-                                    <button
-                                        className="rounded-xl border border-[#ef4444] px-4 py-2 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2]"
-                                        onClick={() => void handleDeleteFile(selectedFile)}
-                                    >
-                                        Xóa file
-                                    </button>
-                                    <button
-                                        className="rounded-xl border border-[#d9e1ef] px-4 py-2 text-sm font-semibold text-[#202124] transition hover:bg-[#f8fafc]"
-                                        onClick={() => setSelectedFile(null)}
-                                    >
-                                        Đóng chi tiết
-                                    </button>
-                                </div>
-                            </div>
-                    </aside>
+                        <SideFile
+                            file={selectedFile}
+                            onClose={() => setSelectedFile(null)}
+                            onFileDeleted={() => {
+                                void loadFiles();
+                                void refreshPlanUsage();
+                            }}
+                            resolveFileFolderName={resolveFileFolderName}
+                        />
                     )}
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-[#e5eaf4] bg-[#f8fbff] px-4 py-3 text-sm text-[#5f6368]">
-                    Upload hiện tại sẽ lưu vào: <strong className="text-[#202124]">{currentFolder ?? "root"}</strong>
-                    {currentFolder && (
-                        <button
-                            className="ml-3 rounded-full border border-[#d4dded] px-3 py-1 text-xs font-semibold text-[#1a73e8] hover:bg-[#e8f0fe]"
-                            onClick={() => setPath([])}
-                        >
-                            Về root
-                        </button>
-                    )}
-                </div>
+                <UploadTargetBanner currentFolder={currentFolder} onGoRoot={handleGoRoot} />
             </section>
 
             <CreateFolderModal
@@ -578,6 +362,16 @@ const FilePage = () => {
                 onSubmit={handleUpload}
                 destinationLabel={currentFolder ?? "root"}
             />
+
+            {uploading && (
+                <div className="fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-xl border border-gray-300/90 bg-white px-4 py-3 shadow-[0_12px_30px_rgba(34,61,102,0.16)]">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#cfe0fc] border-t-[#1a73e8]"></span>
+                    <div>
+                        <p className="text-sm font-semibold text-gray-900">Đang tải tệp lên...</p>
+                        <p className="max-w-52 truncate text-xs text-gray-500">{uploadingFileName || "Vui lòng chờ"}</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

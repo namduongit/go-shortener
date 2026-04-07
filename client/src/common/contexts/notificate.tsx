@@ -112,12 +112,12 @@ const NotificateProvider = ({ children }: { children: React.ReactNode }) => {
                                 {getToastIconLabel(toast.options.type)}
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-[#202124]">{toast.options.title}</p>
-                                <p className="mt-1 text-sm leading-5 text-[#5f6368]">{toast.options.message}</p>
+                                <p className="text-sm font-semibold text-gray-900">{toast.options.title}</p>
+                                <p className="mt-1 text-sm leading-5 text-gray-500">{toast.options.message}</p>
                             </div>
                             <button
                                 type="button"
-                                className="mt-0.5 rounded-full px-2 py-1 text-base font-semibold text-[#5f6368] transition hover:bg-white/70 hover:text-[#202124]"
+                                className="mt-0.5 rounded-full px-2 py-1 text-base font-semibold text-gray-500 transition hover:bg-white/70 hover:text-gray-900"
                                 onClick={() => dismissToast(toast.id)}
                             >
                                 ×

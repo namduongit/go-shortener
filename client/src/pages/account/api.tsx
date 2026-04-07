@@ -142,25 +142,25 @@ const AccountApiPage = () => {
 
     return (
         <div className="space-y-5">
-            <header className="rounded-3xl border border-[#e3e8f2] bg-[#f8fbff] p-5 md:p-7">
-                <p className="text-sm font-semibold text-[#5f6368]">API</p>
-                <h1 className="mt-1 text-3xl font-semibold text-[#202124] md:text-4xl">Access token</h1>
-                <p className="mt-2 text-sm text-[#5f6368]">
+            <header className="rounded-3xl border border-gray-300/90 bg-[#f8fbff] p-5 md:p-7">
+                <p className="text-sm font-semibold text-gray-500">API</p>
+                <h1 className="mt-1 text-3xl font-semibold text-gray-900 md:text-4xl">Access token</h1>
+                <p className="mt-2 text-sm text-gray-500">
                     Tạo token theo ghi chú để chuẩn bị cho luồng truy cập API upload/xóa file. Hiện tại đây là bản demo local, sẵn sàng thay bằng API server sau.
                 </p>
             </header>
 
-            <section className="rounded-3xl border border-[#e3e8f2] bg-white p-5 md:p-7">
+            <section className="rounded-3xl border border-gray-300/90 bg-white p-5 md:p-7">
                 <form className="grid gap-3 md:grid-cols-[1fr_auto]" onSubmit={handleCreateToken}>
                     <div>
-                        <label htmlFor="note" className="text-sm font-semibold text-[#202124]">Ghi chú token</label>
+                        <label htmlFor="note" className="text-sm font-semibold text-gray-900">Ghi chú token</label>
                         <input
                             id="note"
                             name="note"
                             value={note}
                             onChange={(event) => setNote(event.target.value)}
                             placeholder="Ví dụ: Firebase sync worker"
-                            className="mt-2 w-full rounded-xl border border-[#d9e1ef] bg-white px-4 py-3 text-sm text-[#202124] placeholder:text-[#80868b] transition focus:border-[#1a73e8] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/15"
+                            className="mt-2 w-full rounded-xl border border-gray-300/90 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 transition focus:border-[#1a73e8] focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/15"
                         />
                     </div>
                     <div className="flex items-end">
@@ -169,15 +169,15 @@ const AccountApiPage = () => {
                 </form>
             </section>
 
-            <section className="overflow-hidden rounded-3xl border border-[#e3e8f2] bg-white">
+            <section className="overflow-hidden rounded-3xl border border-gray-300/90 bg-white">
                 <div className="flex items-center justify-between border-b border-[#edf1f7] px-4 py-3">
-                    <p className="text-sm font-semibold text-[#202124]">Danh sách token</p>
-                    <p className="text-sm text-[#5f6368]">{tokenCountLabel}</p>
+                    <p className="text-sm font-semibold text-gray-900">Danh sách token</p>
+                    <p className="text-sm text-gray-500">{tokenCountLabel}</p>
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-190 text-left text-sm text-[#202124]">
-                        <thead className="bg-[#fafbfd] text-xs uppercase tracking-wide text-[#5f6368]">
+                    <table className="w-full min-w-190 text-left text-sm text-gray-900">
+                        <thead className="bg-white text-xs uppercase tracking-wide text-gray-500">
                             <tr>
                                 <th className="px-4 py-3">Token</th>
                                 <th className="px-4 py-3">Trạng thái</th>
@@ -189,7 +189,7 @@ const AccountApiPage = () => {
                         <tbody>
                             {tokens.length === 0 ? (
                                 <tr>
-                                    <td className="px-4 py-8 text-center text-[#5f6368]" colSpan={5}>
+                                    <td className="px-4 py-8 text-center text-gray-500" colSpan={5}>
                                         Chưa có token nào. Hãy tạo token đầu tiên để dùng cho các luồng API sau này.
                                     </td>
                                 </tr>
@@ -206,14 +206,14 @@ const AccountApiPage = () => {
                                                 {item.status === "active" ? "Active" : "Revoked"}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-4 text-[#5f6368]">{item.note}</td>
-                                        <td className="px-4 py-4 text-[#5f6368]">{formatDateTime(item.created_at)}</td>
+                                        <td className="px-4 py-4 text-gray-500">{item.note}</td>
+                                        <td className="px-4 py-4 text-gray-500">{formatDateTime(item.created_at)}</td>
                                         <td className="px-4 py-4 text-right">
                                             <div className="inline-flex gap-2">
-                                                <Button type="button" variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => void handleCopyToken(item.token)}>
+                                                <Button type="button" className="rounded-md border border-gray-300/90 bg-white px-3 py-1.5 text-xs text-gray-900 hover:bg-gray-50" onClick={() => void handleCopyToken(item.token)}>
                                                     Copy
                                                 </Button>
-                                                <Button type="button" variant="secondary" className="px-3 py-1.5 text-xs text-[#b3261e]" onClick={() => handleDeleteToken(item.id)}>
+                                                <Button type="button" className="rounded-md border border-gray-300/90 bg-white px-3 py-1.5 text-xs text-[#b3261e] hover:bg-gray-50" onClick={() => handleDeleteToken(item.id)}>
                                                     Xóa
                                                 </Button>
                                             </div>

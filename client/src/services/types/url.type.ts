@@ -1,18 +1,20 @@
-export type UrlResponse = {
-    id: number,
-    code: string,
-    original_url: string,
-    short_url: string,
-    description: string,
-    created_at: string;
-}
-
 export type CreateUrlForm = {
     url: string;
     description: string;
 }
 
+export type UrlResponse = {
+    uuid: string;
+
+    code: string;
+    original_url: string;
+    short_url: string;
+    description: string;
+
+    created_at: Date;
+}
+
 export type UrlListResponse = {
-    owner_id: number;
+    owner_uuid: string;
     urls: UrlResponse[];
 }

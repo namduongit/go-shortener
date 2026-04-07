@@ -1,14 +1,12 @@
 package service
 
 import (
-	"errors"
-	"strings"
 	"url-shortener/internal/model"
 	"url-shortener/internal/repository"
 )
 
-func GetFoldersByUserID(userID uint) ([]model.Folder, error) {
-	folders, err := repository.GetFoldersByUserID(userID)
+func GetFoldersByUserID(accountID uint) ([]model.Folder, error) {
+	folders, err := repository.GetFoldersFromAccountID(accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -16,17 +14,19 @@ func GetFoldersByUserID(userID uint) ([]model.Folder, error) {
 	return folders, nil
 }
 
-func GetFolderByID(folderID uint) (*model.Folder, error) {
-	return repository.GetFolderByID(folderID)
+func GetFolderByUUID(uuid string) (*model.Folder, error) {
+	return repository.GetFolderByUUID(uuid)
 }
 
-func GetFolderByFolderNameAndAccountID(folderName string, accountID uint) (*model.Folder, error) {
-	return repository.GetFolderByFolderNameAndAccountID(folderName, accountID)
+func GetFolderByNameFromAccountID(name string, accountID uint) (*model.Folder, error) {
+	return repository.GetFolderByNameFromAccountID(name, accountID)
 }
 func CreateFolder(userID uint, name string) (*model.Folder, error) {
 	folder := model.Folder{
 		AccountID: userID,
 		Name:      name,
+		TotalFile: 0,
+		TotalSize: 0,
 	}
 
 	if err := repository.CreateFolder(&folder); err != nil {
@@ -34,35 +34,4 @@ func CreateFolder(userID uint, name string) (*model.Folder, error) {
 	}
 
 	return &folder, nil
-}
-
-func DeleteFolderByID(accountID uint, folderID uint) error {
-	_, err := repository.GetFolderByIDAndAccountID(folderID, accountID)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return errors.New("Folder not found")
-		}
-
-		return err
-	}
-
-	totalFiles, err := repository.CountFilesByFolderID(folderID, accountID)
-	if err != nil {
-		return err
-	}
-
-	if totalFiles > 0 {
-		return errors.New("Folder has files")
-	}
-
-	err = repository.DeleteFolderByID(folderID, accountID)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return errors.New("Folder not found")
-		}
-
-		return err
-	}
-
-	return nil
 }

@@ -11,8 +11,8 @@ func GetPlans() ([]model.Plan, error) {
 	return plans, err
 }
 
-func GetPlanByID(planID uint) (*model.Plan, error) {
+func GetPlanByUUID(uuid string) (*model.Plan, error) {
 	var plan model.Plan
-	err := config.DBClient.Where("id = ?", planID).First(&plan).Error
+	err := config.DBClient.Where("uuid = ?", uuid).First(&plan).Error
 	return &plan, err
 }

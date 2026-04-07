@@ -15,8 +15,8 @@ export const UrlModule = {
         return response.data;
     },
 
-    async DeleteUrl(id: number) {
-        const response = await api.delete<RestResponse<null>>(`/api/guard/urls/${id}`);
+    async DeleteUrl(uuid: string) {
+        const response = await api.delete<RestResponse<null>>(`/api/guard/urls/${uuid}`);
         return response.data;
     }
 }

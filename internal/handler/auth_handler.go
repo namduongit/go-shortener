@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strings"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model/response"
 	"url-shortener/internal/service"
@@ -20,20 +19,16 @@ type RegisterRequest struct {
 
 func Register(c *gin.Context) {
 	var req RegisterRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(
-			http.StatusBadRequest,
-			config.GinErrorResponse(
-				err.Error(),
-				config.RestFulInvalid,
-				config.RestFulCodeInvalid,
-			))
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			config.InvalidRequestBody,
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
 		return
 	}
 
 	account, err := service.Register(req.Email, req.Password)
-
 	if err != nil {
 		c.JSON(
 			http.StatusBadRequest,
@@ -45,12 +40,14 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	service.PreloadPlanForAccount(account)
-
 	response := response.RegisterResponse{
-		Email:    account.Email,
-		Role:     string(account.Role),
-		PlanName: account.Plan.Name,
+		UUID:  account.UUID.String(),
+		Email: account.Email,
+		Plan: response.PlanDetailResponse{
+			UUID:         account.Plan.UUID.String(),
+			Name:         account.Plan.Name,
+			StorageLimit: account.Plan.StorageLimit,
+		},
 	}
 
 	c.JSON(http.StatusOK, config.GinResponse(
@@ -70,7 +67,7 @@ func Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			err.Error(),
+			config.InvalidRequestBody,
 			config.RestFulInvalid,
 			config.RestFulCodeInvalid,
 		))
@@ -79,38 +76,43 @@ func Login(c *gin.Context) {
 
 	account, err := service.Login(req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
 			err.Error(),
-			config.RestFulUnauthorized,
-			config.RestFulCodeUnauthorized,
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
 		))
 		return
 	}
 
-	service.PreloadPlanForAccount(account)
-
 	tokenString, _ := utils.GenerateToken(
 		map[string]any{
-			"uid":   account.ID,
-			"email": account.Email,
-			"plan":  account.Plan.Name,
-		}, string(cfg.JWTSecret), string(account.Role), int(account.ID),
+			"email":     account.Email,
+			"plan_name": account.Plan.Name,
+			"join_date": account.CreatedAt.Unix(),
+		},
+		string(account.Role),
+		account.UUID.String(),
+		account.ID,
+		string(cfg.JWTSecret),
 	)
 
 	response := response.LoginResponse{
-		Email:    account.Email,
-		Role:     string(account.Role),
-		PlanName: account.Plan.Name,
+		UUID:  account.UUID.String(),
+		Email: account.Email,
+		Plan: response.PlanDetailResponse{
+			UUID:         account.Plan.UUID.String(),
+			Name:         account.Plan.Name,
+			StorageLimit: account.Plan.StorageLimit,
+		},
 	}
 
 	secureCookie := cfg.ENV == config.Production
-	// If true, the cookie will only be sent over HTTPS. In production, this should be true.
-	// In development, you might want to set it to false if you're not using HTTPS locally.
+
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "accessToken",
 		Value:    *tokenString,
 		Path:     "/",
-		MaxAge:   24 * 60 * 60,
+		MaxAge:   24 * 60 * 60 * 7,
 		HttpOnly: true,
 		Secure:   secureCookie,
 		SameSite: http.SameSiteLaxMode,
@@ -124,24 +126,47 @@ func Login(c *gin.Context) {
 	))
 }
 
-/* Ignore */
-
 func AuthConfig(c *gin.Context) {
-	tokenStr, err := c.Cookie("accessToken")
+	tokenStr, _ := c.Cookie("accessToken")
 	authenticated := false
 
-	if err == nil && strings.TrimSpace(tokenStr) != "" {
-		authenticated = utils.VerifyToken(tokenStr, string(cfg.JWTSecret))
-		if !authenticated {
-			clearAccessTokenCookie(c)
-		}
-	} else {
-		clearAccessTokenCookie(c)
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+			err.Error(),
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
+		))
+		return
 	}
 
-	response := response.AuthConfigResponse{
-		IsAuthenticated: authenticated,
+	isValid, iat, exp, err := utils.VerifyToken(tokenStr, string(cfg.JWTSecret))
+	if err != nil {
+		clearAccessTokenCookie(c)
+		c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
+			err.Error(),
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
+		))
+		return
 	}
+
+	response := response.ConfigResponse{
+		UUID:  account.UUID.String(),
+		Email: account.Email,
+		Config: response.ConfigDetailResponse{
+			IsValid:   isValid,
+			IssueAt:   iat,
+			ExpiresIn: exp,
+		},
+	}
+
+	if isValid {
+		authenticated = true
+	}
+
+	response.Config.IsValid = authenticated
 
 	c.JSON(http.StatusOK, config.GinResponse(
 		response,

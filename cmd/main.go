@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
 	"url-shortener/internal/router"
@@ -9,7 +8,6 @@ import (
 
 func main() {
 	var port = config.GetConfig().Port
-	var serverDirect = config.GetConfig().ServerDirect
 
 	config.InitDBClient()
 	config.InitCLMiniO()
@@ -30,23 +28,25 @@ func main() {
 	// Enterprise plan: 100 GB storage, 1000 URLs
 	config.DBClient.FirstOrCreate(&model.Plan{}, model.Plan{
 		Name:         "Pro",
+		Price:        100000,
 		StorageLimit: 10 * 1024 * 1024 * 1024,
 		URLLimit:     100,
 	})
 
 	config.DBClient.FirstOrCreate(&model.Plan{}, model.Plan{
 		Name:         "Enterprise",
-		StorageLimit: 100 * 1024 * 1024 * 1024,
-		URLLimit:     1000,
+		Price:        50000,
+		StorageLimit: 5 * 1024 * 1024 * 1024,
+		URLLimit:     50,
 	})
 
 	config.DBClient.FirstOrCreate(&model.Plan{}, model.Plan{
 		Name:         "Free",
-		StorageLimit: 10 * 1024 * 1024 * 1024,
+		Price:        0,
+		StorageLimit: 1 * 1024 * 1024 * 1024,
 		URLLimit:     20,
 	})
 
 	router := router.SetupRouter()
-	fmt.Println("Server running on: ", serverDirect)
 	router.Run(":" + port)
 }

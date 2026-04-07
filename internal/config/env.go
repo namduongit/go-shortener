@@ -20,8 +20,8 @@ type AppConfig struct {
 	ENV Environment
 
 	// Server
-	Port         string
-	ServerDirect string
+	Port       string
+	ServerHost string
 
 	// Secret key for JWT and Token
 	JWTSecret   string
@@ -58,15 +58,15 @@ func GetConfig() AppConfig {
 		cfg = AppConfig{
 			ENV: Environment(getEnv("ENV", string(Development))),
 
-			Port:         getEnv("PORT", "8080"),
-			ServerDirect: getEnv("SERVER_DIRECT", "http://localhost:8080"),
+			Port:       getEnv("PORT", "8080"),
+			ServerHost: getEnv("SERVER_HOST", "http://localhost:8080"),
 
 			ClientHost: getEnv("CLIENT_HOST", "http://localhost:5173"),
 
 			DBHost:     getEnv("DB_HOST", "localhost"),
 			DBUser:     getEnv("DB_USER", "postgres"),
 			DBPassword: getEnv("DB_PASSWORD", ""),
-			DBName:     getEnv("DB_NAME", "url_shortener"),
+			DBName:     getEnv("DB_NAME", "gms_cloud"),
 			DBPort:     getEnv("DB_PORT", "5432"),
 			DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 			JWTSecret:  getEnv("JWT_SECRET", "secret_key"),

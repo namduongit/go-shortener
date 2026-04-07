@@ -2,10 +2,10 @@ package handler
 
 import (
 	"net/http"
-	"strings"
 
 	"url-shortener/internal/config"
 	"url-shortener/internal/model/response"
+	"url-shortener/internal/repository"
 	"url-shortener/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -21,37 +21,29 @@ type UpdateProfileRequest struct {
 }
 
 func GetProfile(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
 		))
 		return
 	}
 
-	profile, err := service.GetProfileByAccountID(accountID)
+	profile, err := repository.GetProfileFromAccountID(account.ID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			c.JSON(http.StatusNotFound, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulNotFound,
-				config.RestFulCodeNotFound,
-			))
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+		c.JSON(http.StatusNotFound, config.GinErrorResponse(
+			"Profile not found",
+			config.RestFulNotFound,
+			config.RestFulCodeNotFound,
 		))
 		return
 	}
 
 	res := response.ProfileResponse{
+		UUID:        profile.UUID.String(),
 		Username:    profile.Username,
 		AvatarURL:   profile.AvatarURL,
 		FullName:    profile.FullName,
@@ -69,13 +61,13 @@ func GetProfile(c *gin.Context) {
 }
 
 func UpdateProfile(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
 		))
 		return
 	}
@@ -90,46 +82,53 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	updates := map[string]any{}
+	hasUpdate := false
+	profile, err := repository.GetProfileFromAccountID(account.ID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, config.GinErrorResponse(
+			"Profile not found",
+			config.RestFulNotFound,
+			config.RestFulCodeNotFound,
+		))
+		return
+	}
+
 	if req.Username != nil {
-		updates["username"] = *req.Username
+		profile.Username = *req.Username
+		hasUpdate = true
 	}
 	if req.AvatarURL != nil {
-		updates["avatar_url"] = *req.AvatarURL
+		profile.AvatarURL = *req.AvatarURL
+		hasUpdate = true
 	}
 	if req.FullName != nil {
-		updates["full_name"] = *req.FullName
+		profile.FullName = *req.FullName
+		hasUpdate = true
 	}
 	if req.CompanyName != nil {
-		updates["company_name"] = *req.CompanyName
+		profile.CompanyName = *req.CompanyName
+		hasUpdate = true
 	}
 	if req.Address != nil {
-		updates["address"] = *req.Address
+		profile.Address = *req.Address
+		hasUpdate = true
 	}
 	if req.Phone != nil {
-		updates["phone"] = *req.Phone
+		profile.Phone = *req.Phone
+		hasUpdate = true
 	}
 
-	profile, err := service.UpdateProfileByAccountID(accountID, updates)
+	if !hasUpdate {
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			"No profile fields to update",
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
+
+	profile, err = repository.UpdateProfile(profile)
 	if err != nil {
-		if strings.Contains(err.Error(), "No profile fields to update") {
-			c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulInvalid,
-				config.RestFulCodeInvalid,
-			))
-			return
-		}
-
-		if strings.Contains(err.Error(), "not found") {
-			c.JSON(http.StatusNotFound, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulNotFound,
-				config.RestFulCodeNotFound,
-			))
-			return
-		}
-
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
 			config.RestFulInternalError,
@@ -139,6 +138,7 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	res := response.ProfileResponse{
+		UUID:        profile.UUID.String(),
 		Username:    profile.Username,
 		AvatarURL:   profile.AvatarURL,
 		FullName:    profile.FullName,

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"strings"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
@@ -30,43 +29,26 @@ func CreateShortURL(accountID uint, longURL string, description string) (*model.
 	return &url, nil
 }
 
-func GetListURLsByAccountID(accountID uint) ([]model.URL, error) {
-	urls, err := repository.GetByAccountID(accountID)
-	if err != nil {
-		return nil, err
-	}
+func GetURLsFromAccountID(accountID uint) ([]model.URL, error) {
+	urls, err := repository.GetURLsFromAccountID(accountID)
 
-	return urls, nil
+	return urls, err
 }
 
-func GetLongURL(code string) (string, error) {
-	url, err := repository.GetByShortCode(code)
-	if err != nil {
-		return "", err
-	}
+func GetURLByUUID(uuid string) (*model.URL, error) {
+	url, err := repository.GetURLByUUID(uuid)
 
-	return url.LongURL, nil
+	return url, err
 }
 
-func DeleteURL(code string) error {
-	return repository.DeleteByShortCode(code)
+func GetURLByShortCode(code string) (*model.URL, error) {
+	url, err := repository.GetURLByShortCode(code)
+
+	return url, err
 }
 
-func GetTotalAmountOfURLsByaccountID(accountID uint) (int64, error) {
-	var count int64
-	err := config.DBClient.Model(&model.URL{}).Where("account_id = ?", accountID).Count(&count).Error
-	return count, err
-}
+func DeleteURLByUUID(uuid string) error {
+	err := repository.DeleteURLByUUID(uuid)
 
-func DeleteURLByID(accountID uint, urlID uint) error {
-	err := repository.DeleteByIDAndAccountID(urlID, accountID)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return errors.New("URL not found")
-		}
-
-		return err
-	}
-
-	return nil
+	return err
 }

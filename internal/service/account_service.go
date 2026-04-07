@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"strconv"
 	"strings"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
@@ -31,8 +30,10 @@ func Register(email, password string) (*model.Account, error) {
 		return nil, err
 	}
 
+	account.Plan = plan
+
 	profile := model.Profile{
-		Username:    strconv.FormatUint(uint64(account.ID), 10),
+		Username:    account.UUID.String(),
 		AvatarURL:   "",
 		FullName:    "",
 		CompanyName: "",
@@ -47,7 +48,7 @@ func Register(email, password string) (*model.Account, error) {
 	return &account, nil
 }
 
-func Login(email, password string) (*model.Account, error) {
+func Login(email string, password string) (*model.Account, error) {
 	account, err := repository.GetAccountByEmail(email)
 	if err != nil {
 		if strings.Contains(err.Error(), "record not found") {
@@ -63,48 +64,10 @@ func Login(email, password string) (*model.Account, error) {
 	return account, nil
 }
 
-func GetAccountByID(id uint) (*model.Account, error) {
-	account, err := repository.GetAccountByID(id)
+func GetAccountByUUID(uuid string) (*model.Account, error) {
+	account, err := repository.GetAccountByUUID(uuid)
 	if err != nil && strings.Contains(err.Error(), "record not found") {
 		return nil, errors.New("Not found account")
 	}
 	return account, nil
-}
-
-func PreloadPlanForAccount(account *model.Account) error {
-	err := repository.PreloadPlanForAccount(account)
-	if err != nil && strings.Contains(err.Error(), "record not found") {
-		return errors.New("Not found account")
-	}
-	return err
-}
-
-func GetProfileByAccountID(accountID uint) (*model.Profile, error) {
-	profile, err := repository.GetProfileByAccountID(accountID)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return nil, errors.New("Profile not found")
-		}
-
-		return nil, err
-	}
-
-	return profile, nil
-}
-
-func UpdateProfileByAccountID(accountID uint, updates map[string]any) (*model.Profile, error) {
-	if len(updates) == 0 {
-		return nil, errors.New("No profile fields to update")
-	}
-
-	profile, err := repository.UpdateProfileByAccountID(accountID, updates)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return nil, errors.New("Profile not found")
-		}
-
-		return nil, err
-	}
-
-	return profile, nil
 }

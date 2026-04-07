@@ -1,6 +1,7 @@
 package response
 
 type ProfileResponse struct {
+	UUID        string `json:"uuid"`
 	Username    string `json:"username"`
 	AvatarURL   string `json:"avatar_url"`
 	FullName    string `json:"full_name"`

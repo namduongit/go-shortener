@@ -3,7 +3,7 @@ package response
 import "time"
 
 type URLResponse struct {
-	ID          uint      `json:"id"`
+	UUID        string    `json:"uuid"`
 	Code        string    `json:"code"`
 	OriginalURL string    `json:"original_url"`
 	ShortURL    string    `json:"short_url"`
@@ -12,6 +12,6 @@ type URLResponse struct {
 }
 
 type URLListResponse struct {
-	OwnerID uint          `json:"owner_id"`
-	URLs    []URLResponse `json:"urls"`
+	OwnerUUID string        `json:"owner_uuid"`
+	URLs      []URLResponse `json:"urls"`
 }

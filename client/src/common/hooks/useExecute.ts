@@ -21,6 +21,7 @@ export const useExecute = <T>() => {
 
             console.log("======= Result debug: ", result);
 
+            
             if (typeof result.data !== "undefined") {
                 setData(result.data);
                 options?.onSuccess?.(result.data);

@@ -3,9 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"mime/multipart"
-	"strconv"
-	"strings"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
 	"url-shortener/internal/repository"
@@ -14,7 +13,7 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
-func SaveFile(context context.Context, accountID uint, fileHeader *multipart.FileHeader, folderID *uint) (string, error) {
+func pushToMiniO(context context.Context, accountID uint, fileHeader *multipart.FileHeader, folderID *uint) (string, error) {
 	file, _ := fileHeader.Open()
 	defer file.Close()
 
@@ -22,7 +21,7 @@ func SaveFile(context context.Context, accountID uint, fileHeader *multipart.Fil
 
 	_, err := config.CLMiniO.PutObject(
 		context,
-		"go-shortener",
+		"gms-cloud",
 		storageKey,
 		file,
 		fileHeader.Size,
@@ -32,31 +31,28 @@ func SaveFile(context context.Context, accountID uint, fileHeader *multipart.Fil
 	)
 
 	if err != nil {
+		fmt.Println(err)
 		return "", errors.New("Can not upload file to cloud service")
 	}
 
 	return storageKey, nil
 }
 
-func PushFileToCloud(context context.Context, accountID uint, fileHeader *multipart.FileHeader, folderIDString string) (*model.File, error) {
+func CreateFile(context context.Context, accountID uint, fileHeader *multipart.FileHeader, folderUUID string) (*model.File, error) {
 	var folderID *uint = nil
+	var folder *model.Folder
 
-	if folderIDString != "" {
-		parsedID, err := strconv.ParseUint(folderIDString, 10, 32)
-		if err != nil {
-			return nil, errors.New("Invalid folderID format")
-		}
-
-		folderIDUint := uint(parsedID)
-		folder, err := repository.GetFolderByID(folderIDUint)
+	if folderUUID != "" {
+		var err error
+		folder, err = repository.GetFolderByUUID(folderUUID)
 		if err != nil || folder == nil {
 			return nil, errors.New("Folder not found")
 		}
 
-		folderID = &folderIDUint
+		folderID = &folder.ID
 	}
 
-	storageKey, err := SaveFile(context, accountID, fileHeader, folderID)
+	storageKey, err := pushToMiniO(context, accountID, fileHeader, folderID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,11 +67,24 @@ func PushFileToCloud(context context.Context, accountID uint, fileHeader *multip
 		FolderID:    folderID,
 	}
 
-	return repository.CreateFile(&file)
+	err = repository.CreateFile(&file)
+	if err != nil {
+		return nil, err
+	}
+
+	if folder != nil {
+		file.Folder = folder
+	}
+
+	if folderUUID != "" {
+		repository.UpdateFieldFolder(folderUUID)
+	}
+
+	return &file, nil
 }
 
-func GetFilesByAccountID(accountID uint) ([]model.File, error) {
-	files, err := repository.GetFilesByAccountID(accountID)
+func GetFilesFromAccountID(accountID uint) ([]model.File, error) {
+	files, err := repository.GetFilesFromAccountID(accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,18 +92,27 @@ func GetFilesByAccountID(accountID uint) ([]model.File, error) {
 	return files, nil
 }
 
-func GetFileByID(fileID uint) (*model.File, error) {
-	file, err := repository.GetFileByID(fileID)
+func GetFileByUUID(uuid string) (*model.File, error) {
+	file, err := repository.GetFileByUUID(uuid)
 	if err != nil {
 		return nil, err
 	}
 	return file, nil
 }
 
+func GetFileByUUIDAndAccountID(uuid string, accountID uint) (*model.File, error) {
+	file, err := repository.GetFileByUUIDAndAccountID(uuid, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
 func GetImageURL(ctx context.Context, file *model.File) (*minio.Object, error) {
 	object, err := config.CLMiniO.GetObject(
 		ctx,
-		"go-shortener",
+		"gms-cloud",
 		file.StorageKey,
 		minio.GetObjectOptions{},
 	)
@@ -111,64 +129,20 @@ func GetImageURL(ctx context.Context, file *model.File) (*minio.Object, error) {
 	return object, nil
 }
 
-func DeleteFileByID(ctx context.Context, accountID uint, fileID uint) error {
-	file, err := repository.GetFileByIDAndAccountID(fileID, accountID)
+func DeleteFileByUUID(ctx context.Context, accountID uint, uuid string) error {
+	file, err := repository.GetFileByUUID(uuid)
 	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return errors.New("File not exists")
-		}
-
-		return err
+		return errors.New("File not found")
 	}
 
 	if file.StorageKey != "" {
-		err = config.CLMiniO.RemoveObject(ctx, "go-shortener", file.StorageKey, minio.RemoveObjectOptions{})
+		err = config.CLMiniO.RemoveObject(ctx, "gms-cloud", file.StorageKey, minio.RemoveObjectOptions{})
 		if err != nil {
+			fmt.Println(err)
 			return errors.New("Can not delete file from cloud service")
 		}
 	}
 
-	err = repository.DeleteFileByID(fileID, accountID)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return errors.New("File not exists")
-		}
-
-		return err
-	}
-
-	return nil
-}
-
-func MoveFileToFolder(accountID uint, fileID uint, folderID *uint) error {
-	_, err := repository.GetFileByIDAndAccountID(fileID, accountID)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return errors.New("File not exists")
-		}
-
-		return err
-	}
-
-	if folderID != nil {
-		_, err = repository.GetFolderByIDAndAccountID(*folderID, accountID)
-		if err != nil {
-			if strings.Contains(err.Error(), "record not found") {
-				return errors.New("Folder not found")
-			}
-
-			return err
-		}
-	}
-
-	err = repository.UpdateFileFolder(fileID, accountID, folderID)
-	if err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			return errors.New("File not exists")
-		}
-
-		return err
-	}
-
-	return nil
+	err = repository.DeleteFileByUUIDFromAccountID(uuid, accountID)
+	return err
 }

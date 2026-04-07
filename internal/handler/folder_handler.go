@@ -2,9 +2,8 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
-	"strings"
 	"url-shortener/internal/config"
+	"url-shortener/internal/model"
 	"url-shortener/internal/model/response"
 	"url-shortener/internal/service"
 
@@ -12,19 +11,19 @@ import (
 )
 
 func GetFolders(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
 		))
 		return
 	}
 
-	folders, err := service.GetFoldersByUserID(accountID)
+	folders, err := service.GetFoldersByUserID(account.ID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
 			err.Error(),
@@ -37,16 +36,17 @@ func GetFolders(c *gin.Context) {
 	folderResponses := make([]response.FolderResponse, len(folders))
 	for i, folder := range folders {
 		folderResponses[i] = response.FolderResponse{
-			ID:         folder.ID,
+			UUID:       folder.UUID.String(),
 			Name:       folder.Name,
-			TotalFiles: folder.TotalFiles,
+			TotalFiles: folder.TotalFile,
+			TotalSize:  folder.TotalSize,
 			CreatedAt:  folder.CreatedAt,
 		}
 	}
 
 	response := response.FolderListResponse{
-		OwnerID: accountID,
-		Folders: folderResponses,
+		OwnerUUID: account.UUID.String(),
+		Folders:   folderResponses,
 	}
 
 	c.JSON(http.StatusOK, config.GinResponse(
@@ -62,14 +62,14 @@ type CreateFolderRequest struct {
 }
 
 func CreateFolder(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
 		))
 		return
 	}
@@ -84,18 +84,18 @@ func CreateFolder(c *gin.Context) {
 		return
 	}
 
-	existingFolder, _ := service.GetFolderByFolderNameAndAccountID(req.Name, accountID)
+	existingFolder, _ := service.GetFolderByNameFromAccountID(req.Name, account.ID)
 
 	if existingFolder != nil {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			config.FolderNameExists,
+			"Folder name already exists",
 			config.RestFulInvalid,
 			config.RestFulCodeInvalid,
 		))
 		return
 	}
 
-	folder, err := service.CreateFolder(accountID, req.Name)
+	folder, err := service.CreateFolder(account.ID, req.Name)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
@@ -106,9 +106,10 @@ func CreateFolder(c *gin.Context) {
 	}
 
 	response := response.FolderResponse{
-		ID:         folder.ID,
+		UUID:       folder.UUID.String(),
 		Name:       folder.Name,
-		TotalFiles: folder.TotalFiles,
+		TotalFiles: folder.TotalFile,
+		TotalSize:  folder.TotalSize,
 		CreatedAt:  folder.CreatedAt,
 	}
 
@@ -121,47 +122,51 @@ func CreateFolder(c *gin.Context) {
 }
 
 func DeleteFolder(c *gin.Context) {
-	accountID := c.GetUint("accountID")
-	_, err := service.GetAccountByID(accountID)
+	accountUUID := c.GetString("accountUUID")
+	account, err := service.GetAccountByUUID(accountUUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.Unauthorize,
+			config.RestFulUnauthorized,
+			config.RestFulCodeUnauthorized,
 		))
 		return
 	}
 
-	folderID64, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
+	folderUUID := c.Param("uuid")
+	if folderUUID == "" {
+		folderUUID = c.Param("id")
+	}
+
+	if folderUUID == "" {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			"Invalid folder id",
+			config.InvalidRequestBody,
 			config.RestFulInvalid,
 			config.RestFulCodeInvalid,
 		))
 		return
 	}
 
-	err = service.DeleteFolderByID(accountID, uint(folderID64))
-	if err != nil {
-		if strings.Contains(err.Error(), "Folder has files") {
-			c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulInvalid,
-				config.RestFulCodeInvalid,
-			))
-			return
-		}
+	folder, err := service.GetFolderByUUID(folderUUID)
+	if err != nil || folder == nil || folder.AccountID != account.ID {
+		c.JSON(http.StatusNotFound, config.GinErrorResponse(
+			"Folder not found",
+			config.RestFulNotFound,
+			config.RestFulCodeNotFound,
+		))
+		return
+	}
 
-		if strings.Contains(err.Error(), "not found") {
-			c.JSON(http.StatusNotFound, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulNotFound,
-				config.RestFulCodeNotFound,
-			))
-			return
-		}
+	if folder.TotalFile > 0 {
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			"Folder has files",
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
 
+	if err := config.DBClient.Delete(&model.Folder{}, folder.ID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 			err.Error(),
 			config.RestFulInternalError,

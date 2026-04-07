@@ -14,4 +14,4 @@ export const ProfileModule = {
         const response = await api.put<RestResponse<ProfileResponse>>("/api/guard/profile", data);
         return response.data;
     }
-};
+}
