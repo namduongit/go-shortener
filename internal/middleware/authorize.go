@@ -15,17 +15,6 @@ var jwtKey = []byte(config.GetConfig().JWTSecret)
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.Method == http.MethodGet && c.FullPath() == "/api/guard/file/:uuid/download" {
-			fileUUID := c.Param("uuid")
-			if fileUUID != "" {
-				sharedFile, err := service.GetSharedFileByUUID(fileUUID)
-				if err == nil && sharedFile != nil && sharedFile.IsShared {
-					c.Next()
-					return
-				}
-			}
-		}
-
 		tokenStr := ""
 		if cookieToken, err := c.Cookie("accessToken"); err == nil && cookieToken != "" {
 			tokenStr = cookieToken

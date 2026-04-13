@@ -58,8 +58,12 @@ const (
 	RequireAuthentication ErrorMessageExmaple = "Authentication required"
 	Unauthorize           ErrorMessageExmaple = "Unauthorize"
 	InvalidToken          ErrorMessageExmaple = "Invalid token"
+	MissingAPIKey         ErrorMessageExmaple = "Missing API key"
+	AccountNotFound       ErrorMessageExmaple = "Account not found"
 
-	AccountNotFound ErrorMessageExmaple = "Account not found"
+	// Auth related
+	PasswordCompareFailed ErrorMessageExmaple = "Password and confirm password do not match"
+
 	FileNotExists   ErrorMessageExmaple = "File not exists"
 	URLNotExists    ErrorMessageExmaple = "URL not exists"
 	FolderNotExists ErrorMessageExmaple = "Folder not exists"

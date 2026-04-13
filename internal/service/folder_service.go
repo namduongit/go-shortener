@@ -21,9 +21,9 @@ func GetFolderByUUID(uuid string) (*model.Folder, error) {
 func GetFolderByNameFromAccountID(name string, accountID uint) (*model.Folder, error) {
 	return repository.GetFolderByNameFromAccountID(name, accountID)
 }
-func CreateFolder(userID uint, name string) (*model.Folder, error) {
+func CreateFolder(accountID uint, name string) (*model.Folder, error) {
 	folder := model.Folder{
-		AccountID: userID,
+		AccountID: accountID,
 		Name:      name,
 		TotalFile: 0,
 		TotalSize: 0,

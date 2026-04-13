@@ -1,8 +1,6 @@
 package router
 
 import (
-	"net/url"
-	"strings"
 	"url-shortener/internal/config"
 	"url-shortener/internal/handler"
 	"url-shortener/internal/middleware"
@@ -29,12 +27,30 @@ func SetupRouter() *gin.Engine {
 	r.POST("/auth/login", handler.Login)
 	r.POST("/auth/logout", handler.Logout)
 
+	// Get plans for public
 	r.GET("/api/public/plans", handler.GetPlans)
+
+	// Public image route
 	r.GET("/api/public/images/:code", handler.GetImageFile)
 
-	r.GET("/file/:uuid/download", handler.DownloadSharedFile)
-
+	// Short URL redirection route
 	r.GET("/:code", handler.DirectURL)
+
+	// Api token routes
+	api := r.Group("/api/token")
+	api.Use(middleware.APIMiddleware())
+	{
+		api.POST("/upload-image", handler.UseAPIUpImageHandler)
+		api.DELETE("/delete-image", handler.UseAPIDeleteImageHandler)
+	}
+
+	// Shared file routes
+	share := r.Group("/api/share")
+	share.Use(middleware.ShareFileMiddleware())
+	{
+		// If the file is shared, it can be downloaded without authentication
+		share.GET("/file/:uuid", handler.DownloadSharedFile)
+	}
 
 	// Protected routes
 	protected := r.Group("/api/guard")
@@ -47,91 +63,30 @@ func SetupRouter() *gin.Engine {
 
 		protected.GET("/plans", handler.ViewPlan)
 
+		protected.GET("/tokens", handler.GetToken)
+		protected.POST("/tokens", handler.CreateToken)
+		protected.DELETE("/tokens/:uuid", handler.DeleteToken)
+
 		/* Folder routes */
-		protected.GET(
-			"/folders",
-			handler.GetFolders,
-		)
-		protected.POST(
-			"/folders",
-			handler.CreateFolder,
-		)
-		protected.DELETE(
-			"/folders/:uuid",
-			handler.DeleteFolder,
-		)
-		protected.PUT(
-			"/folders/:uuid",
-			handler.UpdateFolder,
-		)
+		protected.GET("/folders", handler.GetFolders)
+		protected.POST("/folders", handler.CreateFolder)
+		protected.DELETE("/folders/:uuid", handler.DeleteFolder)
+		protected.PUT("/folders/:uuid", handler.UpdateFolder)
 
 		/* File routes */
-		protected.GET(
-			"/files",
-			handler.GetFiles,
-		)
-		protected.POST(
-			"/files",
-			handler.UploadFile,
-		)
-		protected.DELETE(
-			"/files/:uuid",
-			handler.DeleteFile,
-		)
-		protected.POST(
-			"/files/:uuid/share",
-			handler.ShareFile,
-		)
-		protected.POST(
-			"/files/:uuid/unshare",
-			handler.UnShareFile,
-		)
-		protected.GET(
-			"/file/:uuid/download",
-			handler.DownloadFile,
-		)
+		protected.GET("/files", handler.GetFiles)
+		protected.POST("/files", handler.UploadFile)
+		protected.DELETE("/files/:uuid", handler.DeleteFile)
+		// Share and unshare file routes - Download in self access and shared access
+		protected.POST("/files/:uuid/share", handler.ShareFile)
+		protected.POST("/files/:uuid/unshare", handler.UnShareFile)
+		protected.GET("/file/:uuid/download", handler.DownloadFile)
 
 		/* URL routes */
-		protected.GET(
-			"/urls",
-			handler.GetUrls,
-		)
-		protected.POST(
-			"/urls",
-			handler.CreateShortURL,
-		)
-		protected.DELETE(
-			"/urls/:uuid",
-			handler.DeleteURL,
-		)
+		protected.GET("/urls", handler.GetUrls)
+		protected.POST("/urls", handler.CreateShortURL)
+		protected.DELETE("/urls/:uuid", handler.DeleteURL)
 	}
 
 	return r
-}
-
-func normalizeEndpointPath(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
-	}
-
-	if strings.HasPrefix(raw, "/") {
-		return strings.TrimRight(raw, "/")
-	}
-
-	u, err := url.Parse(raw)
-	if err != nil {
-		return ""
-	}
-
-	path := strings.TrimSpace(u.Path)
-	if path == "" || path == "/" {
-		return ""
-	}
-
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
-	}
-
-	return strings.TrimRight(path, "/")
 }

@@ -24,8 +24,10 @@ type AppConfig struct {
 	ServerHost string
 
 	// Secret key for JWT and Token
-	JWTSecret   string
-	TokenSecret string
+	JWTSecret string
+
+	APISecret string
+	APISalt   string
 
 	// Client
 	ClientHost string
@@ -69,11 +71,15 @@ func GetConfig() AppConfig {
 			DBName:     getEnv("DB_NAME", "gms_cloud"),
 			DBPort:     getEnv("DB_PORT", "5432"),
 			DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
-			JWTSecret:  getEnv("JWT_SECRET", "secret_key"),
 
 			MinIOEndpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
 			MinIOAccessKey: getEnv("MINIO_ACCESS_KEY", "access_key"),
 			MinIOSecretKey: getEnv("MINIO_SECRET_KEY", "secret_key"),
+
+			JWTSecret: getEnv("JWT_SECRET", "secret_key"),
+
+			APISecret: getEnv("API_SECRET", "api_secret"),
+			APISalt:   getEnv("API_SALT", "api_salt"),
 		}
 	})
 

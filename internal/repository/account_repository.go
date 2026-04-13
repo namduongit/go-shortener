@@ -25,9 +25,9 @@ func GetAccountByUUID(uuid string) (*model.Account, error) {
 	return &account, nil
 }
 
-func GetAccountByID(id uint) (*model.Account, error) {
+func GetFromPublicKey(publicKey string) (*model.Account, error) {
 	var account model.Account
-	if err := config.DBClient.Preload("Plan").Where("id = ?", id).First(&account).Error; err != nil {
+	if err := config.DBClient.Preload("Plan").Where("tokens.token = ?", publicKey).Joins("JOIN tokens ON tokens.account_id = accounts.id").First(&account).Error; err != nil {
 		return nil, err
 	}
 	return &account, nil

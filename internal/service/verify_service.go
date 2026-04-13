@@ -6,7 +6,7 @@ import (
 	"url-shortener/internal/repository"
 )
 
-func IVerifyServiceStore(account *model.Account, file *multipart.FileHeader) bool {
+func VerifyServiceStore(account *model.Account, file *multipart.FileHeader) bool {
 	usedStorage, err := repository.GetTotalFileSizeByAccountID(account.ID)
 	if err != nil {
 		return false
@@ -22,7 +22,7 @@ func IVerifyServiceStore(account *model.Account, file *multipart.FileHeader) boo
 	return true
 }
 
-func IVerifyServiceCountURL(account *model.Account) bool {
+func VerifyServiceCountURL(account *model.Account) bool {
 	usedURLs, err := repository.CountURLsByAccountID(account.ID)
 	if err != nil {
 		return false

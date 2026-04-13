@@ -14,14 +14,13 @@ import (
 )
 
 func GetFiles(c *gin.Context) {
-
 	account := c.MustGet("account").(*model.Account)
 	files, err := service.GetFilesFromAccountID(account.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
 			err.Error(),
-			config.RestFulInternalError,
-			config.RestFulCodeInternalError,
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
 		))
 		return
 	}
@@ -83,11 +82,11 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	if !service.IVerifyServiceStore(account, fileHeader) {
-		c.JSON(http.StatusForbidden, config.GinErrorResponse(
+	if !service.VerifyServiceStore(account, fileHeader) {
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
 			config.StorageLimitExceeded,
-			config.RestFulForbidden,
-			config.RestFulCodeForbidden,
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
 		))
 		return
 	}
@@ -194,10 +193,6 @@ func GetImageFile(c *gin.Context) {
 		))
 		return
 	}
-}
-
-type MoveFileRequest struct {
-	FolderID *uint `json:"folder_id"`
 }
 
 func DeleteFile(c *gin.Context) {
@@ -341,6 +336,7 @@ func UnShareFile(c *gin.Context) {
 
 func DownloadSharedFile(c *gin.Context) {
 	fileUUID := c.Param("uuid")
+	fmt.Println("adasd")
 
 	file, err := service.GetSharedFileByUUID(fileUUID)
 	if err != nil || file == nil {

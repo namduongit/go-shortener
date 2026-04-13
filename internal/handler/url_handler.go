@@ -31,7 +31,6 @@ func GetUrls(c *gin.Context) {
 			UUID:        url.UUID.String(),
 			Code:        url.ShortCode,
 			OriginalURL: url.LongURL,
-			ShortURL:    cfg.ServerHost + "/api/guard/url/" + url.ShortCode + "/direct",
 			Description: url.Description,
 			CreatedAt:   url.CreatedAt,
 		}
@@ -69,7 +68,7 @@ func CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	if !service.IVerifyServiceCountURL(account) {
+	if !service.VerifyServiceCountURL(account) {
 		c.JSON(http.StatusForbidden, config.GinErrorResponse(
 			config.URLLimitExceeded,
 			config.RestFulForbidden,
@@ -93,7 +92,6 @@ func CreateShortURL(c *gin.Context) {
 		Code:        url.ShortCode,
 		OriginalURL: url.LongURL,
 		Description: url.Description,
-		ShortURL:    cfg.ServerHost + "/api/guard/url/" + url.ShortCode + "/direct",
 		CreatedAt:   url.CreatedAt,
 	}
 

@@ -2,14 +2,11 @@ package service
 
 import (
 	"strings"
-	"url-shortener/internal/config"
 	"url-shortener/internal/model"
 	"url-shortener/internal/repository"
 
 	"github.com/google/uuid"
 )
-
-var cfg = config.GetConfig()
 
 func CreateShortURL(accountID uint, longURL string, description string) (*model.URL, error) {
 	code := strings.ReplaceAll(uuid.New().String(), "-", "")[:6]

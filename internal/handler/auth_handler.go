@@ -32,7 +32,7 @@ func Register(c *gin.Context) {
 
 	if req.Password != req.PasswordConfirm {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			"Password and password confirmation do not match",
+			config.PasswordCompareFailed,
 			config.RestFulInvalid,
 			config.RestFulCodeInvalid,
 		))
