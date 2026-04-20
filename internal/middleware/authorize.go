@@ -22,7 +22,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			authHeader := c.GetHeader("Authorization")
 			if authHeader == "" {
 				c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
-					config.RequireAuthentication,
+					"Authorization header is required",
 					config.RestFulInvalid,
 					config.RestFulCodeInvalid,
 				))
@@ -32,7 +32,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] == "" {
 				c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
-					config.InvalidToken,
+					"Invalid token format",
 					config.RestFulInvalid,
 					config.RestFulCodeInvalid,
 				))
@@ -42,42 +42,29 @@ func AuthMiddleware() gin.HandlerFunc {
 			tokenStr = parts[1]
 		}
 
-		_, _, _, err := utils.VerifyToken(tokenStr, string(jwtKey))
+		claims, err := utils.VerifyToken(tokenStr, string(jwtKey))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-				err.Error(),
+				"Invalid or expired token",
 				config.RestFulUnauthorized,
 				config.RestFulCodeUnauthorized,
 			))
 			return
 		}
 
-		claims, err := utils.ParseToken(tokenStr, string(jwtKey))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
-				err.Error(),
-				config.RestFulUnauthorized,
-				config.RestFulCodeUnauthorized,
-			))
-			return
-		}
-
+		/**
+		* * The 'version_id' claim is used to track the version of the token
+		* ! The version of account will be updated when password is changed
+		* ? @variable: accountUUID -> get account by uuid
+		* ? @variable: version -> check if the token is expired or not by comparing with account version
+		 */
 		accountUUID := claims["uuid"].(string)
 		version := uint(claims["version_id"].(float64))
 
-		account, err := service.GetAccountByUUID(accountUUID)
+		account, err := service.GetAccountByUUIDString(accountUUID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
 				err.Error(),
-				config.RestFulUnauthorized,
-				config.RestFulCodeUnauthorized,
-			))
-			return
-		}
-
-		if account == nil {
-			c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
-				config.AccountNotFound,
 				config.RestFulUnauthorized,
 				config.RestFulCodeUnauthorized,
 			))
@@ -86,10 +73,11 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if account.Version != version {
 			c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
-				config.TokenIsOutdated,
+				"Token is expired",
 				config.RestFulUnauthorized,
 				config.RestFulCodeUnauthorized,
 			))
+			// Clear the cookie later
 			return
 		}
 
@@ -97,7 +85,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("accountID", account.ID)
 		c.Set("account", account)
 
-		fmt.Println(claims)
+		fmt.Printf("Received request with claims: %v", claims)
 
 		c.Next()
 	}

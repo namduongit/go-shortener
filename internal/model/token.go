@@ -7,14 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type Scope string
-
-const (
-	ScopeRead  Scope = "read"
-	ScopeWrite Scope = "write"
-	ScopeAdmin Scope = "admin"
-)
-
 type Token struct {
 	gorm.Model
 
@@ -23,7 +15,6 @@ type Token struct {
 	Name      string
 	Token     string `gorm:"unique;not null"`
 	TokenHash string `gorm:"unique;not null"`
-	Scope     string
 	ExpiresAt *time.Time
 
 	AccountID uint `gorm:"index"`

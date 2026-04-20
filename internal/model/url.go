@@ -8,7 +8,7 @@ import (
 type URL struct {
 	gorm.Model
 
-	UUID uuid.UUID
+	UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
 
 	Description string
 	ShortCode   string `gorm:"uniqueIndex"`

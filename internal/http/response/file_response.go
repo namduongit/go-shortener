@@ -7,7 +7,7 @@ type FileResponse struct {
 	FileName    string    `json:"file_name"`
 	FileType    string    `json:"file_type"`
 	ContentType string    `json:"content_type"`
-	Size        int64     `json:"size"`
+	Size        uint64    `json:"size"`
 	IsShared    bool      `json:"is_shared"`
 	FolderUUID  *string   `json:"folder_uuid"`
 	FolderName  string    `json:"folder_name"`

@@ -1,41 +1,14 @@
 package service
 
 import (
+	"url-shortener/internal/config"
 	"url-shortener/internal/model"
-	"url-shortener/internal/repository"
 )
 
-func GetFoldersByUserID(accountID uint) ([]model.Folder, error) {
-	folders, err := repository.GetFoldersFromAccountID(accountID)
-	if err != nil {
-		return nil, err
-	}
-
-	return folders, nil
-}
-
-func GetFolderByUUID(uuid string) (*model.Folder, error) {
-	return repository.GetFolderByUUID(uuid)
-}
-
-func GetFolderByNameFromAccountID(name string, accountID uint) (*model.Folder, error) {
-	return repository.GetFolderByNameFromAccountID(name, accountID)
-}
-func CreateFolder(accountID uint, name string) (*model.Folder, error) {
-	folder := model.Folder{
-		AccountID: accountID,
-		Name:      name,
-		TotalFile: 0,
-		TotalSize: 0,
-	}
-
-	if err := repository.CreateFolder(&folder); err != nil {
-		return nil, err
-	}
-
-	return &folder, nil
-}
-
-func RenameFolder(uuid string, accountID uint, name string) error {
-	return repository.UpdateFolderNameByUUIDAndAccountID(uuid, accountID, name)
+func GetFolders(accountID uint) ([]model.Folder, error) {
+	var folders []model.Folder
+	err := config.PostgresClient.
+		Where("account_id = ?", accountID).
+		Find(&folders).Error
+	return folders, err
 }

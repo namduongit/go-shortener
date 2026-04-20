@@ -1,0 +1,330 @@
+GMS Cloud - Model Snapshot
+Generated: 2026-04-17
+
+=== AutoMigrate in cmd/main.go ===
+    18		config.PostgresClient.AutoMigrate(
+    19			&model.Plan{},
+    20			&model.Account{},
+    21			&model.AccountUsage{},
+    22			&model.Profile{},
+    23			&model.URL{},
+    24			&model.Folder{},
+    25			&model.File{},
+    26			&model.Token{},
+    27			&model.Session{},
+    28			&model.Part{},
+    29		)
+
+=== Model Files (internal/model) ===
+internal/model/account.go
+internal/model/account_usage.go
+internal/model/file.go
+internal/model/folder.go
+internal/model/part.go
+internal/model/plan.go
+internal/model/profile.go
+internal/model/session.go
+internal/model/token.go
+internal/model/url.go
+
+==================================================
+FILE: internal/model/account.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"github.com/google/uuid"
+     5		"gorm.io/gorm"
+     6	)
+     7	
+     8	type Role string
+     9	
+    10	const (
+    11		RoleUser  Role = "none"
+    12		RoleAdmin Role = "admin"
+    13	)
+    14	
+    15	type AccountStatus string
+    16	
+    17	const (
+    18		StatusActive   AccountStatus = "active"
+    19		StatusInactive AccountStatus = "inactive"
+    20		StatusBanned   AccountStatus = "banned"
+    21	)
+    22	
+    23	type Account struct {
+    24		gorm.Model
+    25	
+    26		UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+    27	
+    28		Email    string `gorm:"unique"`
+    29		Role     Role   `gorm:"default:'none'"`
+    30		Password string
+    31		Version  uint `gorm:"default:0; not null"`
+    32	
+    33		Status AccountStatus `gorm:"default:'active'"`
+    34		// Token for email verification, It is JWT token that contains expiration time and email of account
+    35		VerificationToken string `gorm:"type:text; default:null"`
+    36	
+    37		// One-to-One relationship with AccountUsage
+    38		Usage AccountUsage `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+    39	
+    40		// One-to-One relationship with Profile
+    41		Profile Profile `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+    42	
+    43		Tokens  []Token
+    44		Folders []Folder
+    45		Files   []File
+    46		URLs    []URL
+    47	
+    48		Sessions []Session
+    49	
+    50		// Many-to-One relationship with Plan
+    51		Plan   Plan
+    52		PlanID uint `gorm:"index"`
+    53	}
+
+==================================================
+FILE: internal/model/account_usage.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import "gorm.io/gorm"
+     4	
+     5	type AccountUsage struct {
+     6		gorm.Model
+     7	
+     8		AccountID     uint   `gorm:"uniqueIndex;not null"`
+     9		QuotaBytes    uint64 `gorm:"default:0;not null"`
+    10		UsedStorage   uint64 `gorm:"default:0;not null"`
+    11		ReservedBytes uint64 `gorm:"default:0;not null"`
+    12	}
+
+==================================================
+FILE: internal/model/file.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"github.com/google/uuid"
+     5		"gorm.io/gorm"
+     6	)
+     7	
+     8	type FileStatus string
+     9	
+    10	const (
+    11		Active      FileStatus = "active"
+    12		Deleted     FileStatus = "deleted"
+    13		Quarantined FileStatus = "quarantined"
+    14	)
+    15	
+    16	type File struct {
+    17		gorm.Model
+    18	
+    19		UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+    20	
+    21		FileName    string
+    22		FileType    string `gorm:"not null"`
+    23		ContentType string
+    24		// MiniO object name
+    25		StorageKey string
+    26		Size       uint64
+    27		// Default is false, It will be changed if user want to share
+    28		IsShared bool `gorm:"default:false"`
+    29	
+    30		Status FileStatus `gorm:"not null"`
+    31	
+    32		AccountID uint `gorm:"index"`
+    33	
+    34		FolderID *uint   `gorm:"index"`
+    35		Folder   *Folder `gorm:"foreignKey:FolderID;references:ID"`
+    36	}
+
+==================================================
+FILE: internal/model/folder.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"github.com/google/uuid"
+     5		"gorm.io/gorm"
+     6	)
+     7	
+     8	type Folder struct {
+     9		gorm.Model
+    10	
+    11		UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+    12	
+    13		Name      string `gorm:"size:100;not null"`
+    14		TotalFile uint64
+    15		TotalSize uint64
+    16	
+    17		AccountID uint `gorm:"index"`
+    18	}
+
+==================================================
+FILE: internal/model/part.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"gorm.io/gorm"
+     5	)
+     6	
+     7	type Part struct {
+     8		gorm.Model
+     9	
+    10		SessionID  uint   `gorm:"index;not null;uniqueIndex:idx_session_part"`
+    11		PartNumber int32  `gorm:"not null;uniqueIndex:idx_session_part"`
+    12		ETag       string `gorm:"not null"`
+    13		SizeBytes  int64  `gorm:"not null"`
+    14	}
+
+==================================================
+FILE: internal/model/plan.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"github.com/google/uuid"
+     5		"gorm.io/gorm"
+     6	)
+     7	
+     8	/*
+     9	- Price is VND unit
+    10	- If you want to change price, please setup the price carefully
+    11	*/
+    12	type Plan struct {
+    13		gorm.Model
+    14	
+    15		UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+    16	
+    17		Name         string
+    18		Price        uint64
+    19		StorageLimit uint64
+    20		URLLimit     uint64
+    21	
+    22		Accounts []Account
+    23	}
+
+==================================================
+FILE: internal/model/profile.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"gorm.io/gorm"
+     5	)
+     6	
+     7	type Profile struct {
+     8		gorm.Model
+     9	
+    10		AccountID uint `gorm:"index"`
+    11	
+    12		AvatarURL   string
+    13		FullName    string
+    14		CompanyName string
+    15		Address     string
+    16		Phone       string
+    17	}
+
+==================================================
+FILE: internal/model/session.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"time"
+     5	
+     6		"github.com/google/uuid"
+     7		"gorm.io/gorm"
+     8	)
+     9	
+    10	type UploadType string
+    11	
+    12	const (
+    13		SingleUpload    UploadType = "single"
+    14		MultipartUpload UploadType = "multipart"
+    15	)
+    16	
+    17	type SessionStatus string
+    18	
+    19	const (
+    20		SessionInProgress SessionStatus = "initiated"
+    21		SessionCompleted  SessionStatus = "completed"
+    22		SessionFailed     SessionStatus = "failed"
+    23		SessionExpired    SessionStatus = "expired"
+    24		SessionAborted    SessionStatus = "aborted"
+    25	)
+    26	
+    27	type Session struct {
+    28		gorm.Model
+    29	
+    30		UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+    31	
+    32		AccountID uint `gorm:"index;not null"`
+    33	
+    34		FileName    string
+    35		StorageKey  string
+    36		ContentType string
+    37		TotalSize   uint64
+    38	
+    39		UploadType UploadType `gorm:"not null"`
+    40	
+    41		ObjectKeyTmp   string `gorm:"not null"`
+    42		ObjectKeyFinal string `gorm:"not null"`
+    43	
+    44		S3UploadID string
+    45	
+    46		Status        SessionStatus
+    47		ExpiresAt     time.Time
+    48		ReversedBytes uint64 `gorm:"default:0; not null"`
+    49	}
+
+==================================================
+FILE: internal/model/token.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"time"
+     5	
+     6		"github.com/google/uuid"
+     7		"gorm.io/gorm"
+     8	)
+     9	
+    10	type Token struct {
+    11		gorm.Model
+    12	
+    13		UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+    14	
+    15		Name      string
+    16		Token     string `gorm:"unique;not null"`
+    17		TokenHash string `gorm:"unique;not null"`
+    18		ExpiresAt *time.Time
+    19	
+    20		AccountID uint `gorm:"index"`
+    21	}
+
+==================================================
+FILE: internal/model/url.go
+--------------------------------------------------
+     1	package model
+     2	
+     3	import (
+     4		"github.com/google/uuid"
+     5		"gorm.io/gorm"
+     6	)
+     7	
+     8	type URL struct {
+     9		gorm.Model
+    10	
+    11		UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
+    12	
+    13		Description string
+    14		ShortCode   string `gorm:"uniqueIndex"`
+    15		LongURL     string
+    16	
+    17		AccountID uint `gorm:"index"`
+    18	}
+

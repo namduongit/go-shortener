@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -23,14 +24,22 @@ type AppConfig struct {
 	Port       string
 	ServerHost string
 
+	// Client
+	ClientHost string
+
 	// Secret key for JWT and Token
 	JWTSecret string
 
+	// Secret key for API
 	APISecret string
 	APISalt   string
 
-	// Client
-	ClientHost string
+	// Mail server configuration
+	MailHost     string
+	MailPort     int
+	MailUsername string
+	MailPassword string
+	MailSecret   string
 
 	// Database
 	DBHost     string
@@ -41,9 +50,16 @@ type AppConfig struct {
 	DBSSLMode  string
 
 	// MiniO
-	MinIOEndpoint  string
-	MinIOAccessKey string
-	MinIOSecretKey string
+	MiniOFinalBucketName string
+	MinIOTmpBucketName   string
+	MinIOEndpoint        string
+	MinIOAccessKey       string
+	MinIOSecretKey       string
+
+	// Redis
+	RedisHost     string
+	RedisPassword string
+	RedisDB       int
 }
 
 var (
@@ -58,13 +74,38 @@ func GetConfig() AppConfig {
 		}
 
 		cfg = AppConfig{
+			/* Environment */
 			ENV: Environment(getEnv("ENV", string(Development))),
 
+			/* Server */
 			Port:       getEnv("PORT", "8080"),
 			ServerHost: getEnv("SERVER_HOST", "http://localhost:8080"),
 
+			/* Client */
 			ClientHost: getEnv("CLIENT_HOST", "http://localhost:5173"),
 
+			/* Secret key for JWT and Token */
+			JWTSecret: getEnv("JWT_SECRET", "secret_key"),
+
+			/* API Secret and Salt */
+			APISecret: getEnv("API_SECRET", "api_secret"),
+			APISalt:   getEnv("API_SALT", "api_salt"),
+
+			/* Mail server configuration */
+			MailHost: getEnv("MAIL_HOST", "smtp.gmail.com"),
+			MailPort: func() int {
+				port, err := strconv.Atoi(getEnv("MAIL_PORT", "587"))
+				if err != nil {
+					log.Printf("warning: invalid MAIL_PORT, using default: %v", err)
+					return 587
+				}
+				return port
+			}(),
+			MailUsername: getEnv("MAIL_USERNAME", "email@gmail.com"),
+			MailPassword: getEnv("MAIL_PASSWORD", "password"),
+			MailSecret:   getEnv("MAIL_SECRECT", "mail_secret"),
+
+			/* Database Configuration - Postgres */
 			DBHost:     getEnv("DB_HOST", "localhost"),
 			DBUser:     getEnv("DB_USER", "postgres"),
 			DBPassword: getEnv("DB_PASSWORD", ""),
@@ -72,14 +113,24 @@ func GetConfig() AppConfig {
 			DBPort:     getEnv("DB_PORT", "5432"),
 			DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 
-			MinIOEndpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-			MinIOAccessKey: getEnv("MINIO_ACCESS_KEY", "access_key"),
-			MinIOSecretKey: getEnv("MINIO_SECRET_KEY", "secret_key"),
+			/* MinIO Configuration */
+			MiniOFinalBucketName: getEnv("MINIO_FINAL_BUCKET_NAME", "gms-cloud"),
+			MinIOTmpBucketName:   getEnv("MINIO_TMP_BUCKET_NAME", "gms-cloud-tmp"),
+			MinIOEndpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			MinIOAccessKey:       getEnv("MINIO_ACCESS_KEY", "access_key"),
+			MinIOSecretKey:       getEnv("MINIO_SECRET_KEY", "secret_key"),
 
-			JWTSecret: getEnv("JWT_SECRET", "secret_key"),
-
-			APISecret: getEnv("API_SECRET", "api_secret"),
-			APISalt:   getEnv("API_SALT", "api_salt"),
+			/* Redis Configuration */
+			RedisHost:     getEnv("REDIS_HOST", "localhost:6379"),
+			RedisPassword: getEnv("REDIS_PASSWORD", ""),
+			RedisDB: func() int {
+				db, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
+				if err != nil {
+					log.Printf("warning: invalid REDIS_DB, using default: %v", err)
+					return 0
+				}
+				return db
+			}(),
 		}
 	})
 

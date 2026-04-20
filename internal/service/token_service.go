@@ -2,17 +2,16 @@ package service
 
 import (
 	"time"
+	"url-shortener/internal/config"
 	"url-shortener/internal/model"
-	"url-shortener/internal/repository"
 	"url-shortener/internal/utils"
 )
 
 func GetTokensByAccountID(accountID uint) ([]model.Token, error) {
-	tokens, err := repository.GetTokensFromAccountID(accountID)
-	if err != nil {
+	var tokens []model.Token
+	if err := config.PostgresClient.Where("account_id = ?", accountID).Find(&tokens).Error; err != nil {
 		return nil, err
 	}
-
 	return tokens, nil
 }
 
@@ -38,7 +37,7 @@ func CreateToken(accountID uint, name string, days *int) (*model.Token, string, 
 		ExpiresAt: expiresAt,
 	}
 
-	if err := repository.CreateToken(&token); err != nil {
+	if err := config.PostgresClient.Create(&token).Error; err != nil {
 		return nil, "", err
 	}
 
@@ -46,5 +45,5 @@ func CreateToken(accountID uint, name string, days *int) (*model.Token, string, 
 }
 
 func DeleteToken(uuid string) error {
-	return repository.DeleteTokenByUUID(uuid)
+	return config.PostgresClient.Where("uuid = ?", uuid).Delete(&model.Token{}).Error
 }

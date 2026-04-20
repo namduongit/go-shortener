@@ -11,8 +11,8 @@ type Folder struct {
 	UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
 
 	Name      string `gorm:"size:100;not null"`
-	TotalFile int64
-	TotalSize int64
+	TotalFile uint64
+	TotalSize uint64
 
 	AccountID uint `gorm:"index"`
 }

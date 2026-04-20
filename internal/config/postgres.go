@@ -2,15 +2,15 @@ package config
 
 import (
 	"fmt"
+	"log"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-var DBClient *gorm.DB
+var PostgresClient *gorm.DB
 
-func InitDBClient() {
-	cfg := GetConfig()
+func InitPostgresClient() {
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.DBHost,
@@ -21,11 +21,12 @@ func InitDBClient() {
 		cfg.DBSSLMode,
 	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	postgresClient, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Connect to MongoDB cloud success")
 
-	DBClient = db
+	log.Println("Connect to PostgreSQL cloud success")
+
+	PostgresClient = postgresClient
 }

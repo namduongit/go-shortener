@@ -14,6 +14,9 @@ type APITokenPair struct {
 	PrivateTokenHash string
 }
 
+/*
+* Generate a secure random token with a given prefix and size
+ */
 func generateSecureToken(prefix string, size int) (string, error) {
 	randomBytes := make([]byte, size)
 	if _, err := rand.Read(randomBytes); err != nil {
@@ -24,6 +27,11 @@ func generateSecureToken(prefix string, size int) (string, error) {
 	return prefix + encoded, nil
 }
 
+/*
+* Generate a pair of API tokens: public and private
+* The private token is hashed with bcrypt and stored in the database
+* The public token is returned to the user and used for API requests
+ */
 func GenerateAPITokenPair() (*APITokenPair, error) {
 	cfg := config.GetConfig()
 
@@ -50,8 +58,11 @@ func GenerateAPITokenPair() (*APITokenPair, error) {
 	}, nil
 }
 
+/*
+* Verify token from API request by comparing the hash
+? true if private token = hash(private token from request + secret + salt)
+*/
 func VerifyAPIToken(privateToken string, hashKeyLoadFromAccount string) bool {
-	cfg := config.GetConfig()
 	hashSource := privateToken + cfg.APISecret + cfg.APISalt
 
 	err := bcrypt.CompareHashAndPassword([]byte(hashKeyLoadFromAccount), []byte(hashSource))

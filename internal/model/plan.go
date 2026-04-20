@@ -15,9 +15,9 @@ type Plan struct {
 	UUID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null;default:gen_random_uuid()"`
 
 	Name         string
-	Price        int64
-	StorageLimit int64
-	URLLimit     int64
+	Price        uint64
+	StorageLimit uint64
+	URLLimit     uint64
 
 	Accounts []Account
 }

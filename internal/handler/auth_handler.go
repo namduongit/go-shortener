@@ -3,43 +3,61 @@ package handler
 import (
 	"net/http"
 	"url-shortener/internal/config"
+	"url-shortener/internal/http/request"
+	"url-shortener/internal/http/response"
 	"url-shortener/internal/model"
-	"url-shortener/internal/model/response"
 	"url-shortener/internal/service"
 	"url-shortener/internal/utils"
+	"url-shortener/libs"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var cfg = config.GetConfig()
 
-type RegisterRequest struct {
-	Email           string `json:"email"`
-	Password        string `json:"password"`
-	PasswordConfirm string `json:"password_confirm"`
-}
-
+/**
+* * Register method - Create new account with email and password
+* TODO: Register -> Validate input -> Hash password -> Create account in database -> Send verification email
+ */
 func Register(c *gin.Context) {
-	var req RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			config.InvalidRequestBody,
-			config.RestFulInvalid,
-			config.RestFulCodeInvalid,
-		))
+	var req request.RegisterRequest
+	if err := libs.WithBind(c, &req); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInvalid,
+				config.RestFulCodeInvalid,
+			))
 		return
 	}
 
 	if req.Password != req.PasswordConfirm {
-		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			config.PasswordCompareFailed,
-			config.RestFulInvalid,
-			config.RestFulCodeInvalid,
-		))
+		c.JSON(
+			http.StatusBadRequest,
+			config.GinErrorResponse(
+				"Password and confirm password do not match",
+				config.RestFulInvalid,
+				config.RestFulCodeInvalid,
+			))
 		return
 	}
 
-	account, err := service.Register(req.Email, req.Password)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInvalid,
+				config.RestFulCodeInvalid,
+			))
+		return
+	}
+
+	account, err := service.RegisterAccount(req.Email, string(hashed))
+
 	if err != nil {
 		c.JSON(
 			http.StatusBadRequest,
@@ -61,6 +79,68 @@ func Register(c *gin.Context) {
 		},
 	}
 
+	c.JSON(
+		http.StatusOK,
+		config.GinResponse(
+			response,
+			config.RestFulSuccess,
+			nil,
+			config.RestFulCodeSuccess,
+		))
+}
+
+/**
+* * Login method - Authenticate user with email and password
+* TODO: Login -> Validate input -> Check credentials -> Generate token -> Set token in cookie
+ */
+func Login(c *gin.Context) {
+	var req request.LoginRequest
+	if err := libs.WithBind(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			err.Error(),
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
+
+	account, err := service.LoginAccount(req.Email, req.Password)
+
+	if err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInvalid,
+				config.RestFulCodeInvalid,
+			))
+		return
+	}
+
+	tokenString, _ := utils.GenerateToken(
+		map[string]any{
+			"email":     account.Email,
+			"plan_name": account.Plan.Name,
+			"join_date": account.CreatedAt.Unix(),
+		},
+		string(account.Role),
+		account.UUID.String(),
+		account.Version,
+		string(cfg.JWTSecret),
+	)
+
+	utils.SetAccessTokenCookie(c, *tokenString)
+
+	response := response.LoginResponse{
+		UUID:  account.UUID.String(),
+		Email: account.Email,
+		Plan: response.PlanDetailResponse{
+			UUID:         account.Plan.UUID.String(),
+			Name:         account.Plan.Name,
+			StorageLimit: account.Plan.StorageLimit,
+		},
+	}
+
 	c.JSON(http.StatusOK, config.GinResponse(
 		response,
 		config.RestFulSuccess,
@@ -69,23 +149,124 @@ func Register(c *gin.Context) {
 	))
 }
 
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+/**
+* *Auth config method - Validate state of user session
+* ! This method handled in middlware
+* TODO: Auth config -> Check token in cookie -> If valid, return user info and session config -> If invalid, clear cookie and return unauthorized
+ */
+
+func AuthConfig(c *gin.Context) {
+	tokenStr, _ := c.Cookie("accessToken")
+	authenticated := false
+
+	account := c.MustGet("account").(*model.Account)
+
+	claims, err := utils.VerifyToken(tokenStr, string(cfg.JWTSecret))
+	if err != nil {
+		utils.ClearAccessTokenCookie(c)
+		c.JSON(
+			http.StatusUnauthorized,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulUnauthorized,
+				config.RestFulCodeUnauthorized,
+			))
+		return
+	}
+
+	iat, _ := claims["iat"].(float64)
+	exp, _ := claims["exp"].(float64)
+
+	service.ReloadAccount(account)
+
+	response := response.ConfigResponse{
+		UUID:     account.UUID.String(),
+		Email:    account.Email,
+		PlanName: account.Plan.Name,
+		Config: response.ConfigDetailResponse{
+			IsValid:   iat < exp,
+			IssueAt:   int64(iat),
+			ExpiresIn: int64(exp),
+		},
+		Usage: response.UsageResponse{
+			PlanUUID:      account.Plan.UUID.String(),
+			TotalBytes:    account.Plan.StorageLimit,
+			QuotaBytes:    account.Usage.QuotaBytes,
+			UsedStorage:   account.Usage.UsedStorage,
+			ReservedBytes: account.Usage.ReservedBytes,
+		},
+	}
+
+	response.Config.IsValid = authenticated
+
+	c.JSON(http.StatusOK, config.GinResponse(
+		response,
+		config.RestFulSuccess,
+		nil,
+		config.RestFulCodeSuccess,
+	))
 }
 
-func Login(c *gin.Context) {
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+/**
+* * Forgot password method
+* TODO: Forgot password -> Generate reset token -> Send reset email
+ */
+
+func ForgotPassword(c *gin.Context) {
+	var req request.ForgotPasswordRequest
+	if err := libs.WithBind(c, &req); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInvalid,
+				config.RestFulCodeInvalid,
+			))
+		return
+	}
+
+	// Call mail service to send reset password email
+}
+
+/**
+* * Change password method
+* ! This method handled in middlware
+* TODO: Change password -> Update account version -> Resend new token to client
+* ! Important: When update account version, all old token will be invalid
+ */
+func ChangePassword(c *gin.Context) {
+	var req request.ChangePasswordRequest
+	if err := libs.WithBind(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
-			config.InvalidRequestBody,
+			err.Error(),
 			config.RestFulInvalid,
 			config.RestFulCodeInvalid,
 		))
 		return
 	}
 
-	account, err := service.Login(req.Email, req.Password)
+	account := c.MustGet("account").(*model.Account)
+
+	if req.Password != req.PasswordConfirm {
+		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
+			"Password and confirm password do not match",
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, config.GinErrorResponse(
+			err.Error(),
+			config.RestFulInvalid,
+			config.RestFulCodeInvalid,
+		))
+		return
+	}
+
+	err = service.UpdateAccountPassword(account, string(hashed))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, config.GinErrorResponse(
 			err.Error(),
@@ -107,97 +288,87 @@ func Login(c *gin.Context) {
 		string(cfg.JWTSecret),
 	)
 
-	response := response.LoginResponse{
-		UUID:  account.UUID.String(),
-		Email: account.Email,
-		Plan: response.PlanDetailResponse{
-			UUID:         account.Plan.UUID.String(),
-			Name:         account.Plan.Name,
-			StorageLimit: account.Plan.StorageLimit,
-		},
-	}
+	// Clear old cookie and set new cookie with new token
+	utils.ClearAccessTokenCookie(c)
+	utils.SetAccessTokenCookie(c, *tokenString)
 
-	secureCookie := cfg.ENV == config.Production
+	c.JSON(
+		http.StatusOK,
+		config.GinResponse(
+			nil,
+			config.RestFulSuccess,
+			nil,
+			config.RestFulCodeSuccess,
+		))
+}
 
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "accessToken",
-		Value:    *tokenString,
-		Path:     "/",
-		MaxAge:   24 * 60 * 60 * 7,
-		HttpOnly: true,
-		Secure:   secureCookie,
-		SameSite: http.SameSiteLaxMode,
-	})
+/**
+* * Logout method
+* ! This method handled in middlware
+* TODO: Logout -> Clear access token cookie -> Send goroutine to update account version
+ */
+func Logout(c *gin.Context) {
+	utils.ClearAccessTokenCookie(c)
 
 	c.JSON(http.StatusOK, config.GinResponse(
-		response,
+		nil,
 		config.RestFulSuccess,
 		nil,
 		config.RestFulCodeSuccess,
 	))
 }
 
-func AuthConfig(c *gin.Context) {
-	tokenStr, _ := c.Cookie("accessToken")
-	authenticated := false
+/*
+* Activation method
+* TODO: Check in redis -> If token valid, activate account and delete token in redis -> If token invalid, return error
+ */
+func Activation(c *gin.Context) {
+	email := c.Query("email")
+	token := c.Query("activate-key")
 
-	account := c.MustGet("account").(*model.Account)
-
-	isValid, iat, exp, err := utils.VerifyToken(tokenStr, string(cfg.JWTSecret))
-	if err != nil {
-		clearAccessTokenCookie(c)
-		c.JSON(http.StatusUnauthorized, config.GinErrorResponse(
-			err.Error(),
-			config.RestFulUnauthorized,
-			config.RestFulCodeUnauthorized,
-		))
+	if err := service.ActivateAccount(email, token); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInvalid,
+				config.RestFulCodeInvalid,
+			))
 		return
 	}
 
-	response := response.ConfigResponse{
-		UUID:  account.UUID.String(),
-		Email: account.Email,
-		Config: response.ConfigDetailResponse{
-			IsValid:   isValid,
-			IssueAt:   iat,
-			ExpiresIn: exp,
-		},
-	}
-
-	if isValid {
-		authenticated = true
-	}
-
-	response.Config.IsValid = authenticated
-
-	c.JSON(http.StatusOK, config.GinResponse(
-		response,
-		config.RestFulSuccess,
-		nil,
-		config.RestFulCodeSuccess,
-	))
+	c.JSON(
+		http.StatusOK,
+		config.GinResponse(
+			nil,
+			config.RestFulSuccess,
+			nil,
+			config.RestFulCodeSuccess,
+		))
 }
 
-func Logout(c *gin.Context) {
-	clearAccessTokenCookie(c)
+func ResendActivationEmail(c *gin.Context) {
+	email := c.Query("email")
+	oldActivationToken := c.Query("activate-key")
 
-	c.JSON(http.StatusOK, config.GinResponse(
-		nil,
-		config.RestFulSuccess,
-		nil,
-		config.RestFulCodeSuccess,
-	))
-}
+	if err := service.ResendActivationEmail(email, oldActivationToken); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			config.GinErrorResponse(
+				err.Error(),
+				config.RestFulInvalid,
+				config.RestFulCodeInvalid,
+			))
+		return
+	}
 
-func clearAccessTokenCookie(c *gin.Context) {
-	secureCookie := cfg.ENV == config.Production
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "accessToken",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   secureCookie,
-		SameSite: http.SameSiteLaxMode,
-	})
+	c.JSON(
+		http.StatusOK,
+		config.GinResponse(
+			nil,
+			config.RestFulSuccess,
+			nil,
+			config.RestFulCodeSuccess,
+		),
+	)
 }
