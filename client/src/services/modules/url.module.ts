@@ -6,17 +6,17 @@ const api = Axios();
 
 export const UrlModule = {
     async GetUrls() {
-        const response = await api.get<RestResponse<UrlListResponse>>("/api/guard/urls");
+        const response = await api.get<RestResponse<UrlListResponse>>("/api/guard/short-urls");
         return response.data;
     },
 
     async CreateUrl(data: CreateUrlForm) {
-        const response = await api.post<RestResponse<UrlResponse>>("/api/guard/urls", data);
+        const response = await api.post<RestResponse<UrlResponse>>("/api/guard/short-urls", data);
         return response.data;
     },
 
     async DeleteUrl(uuid: string) {
-        const response = await api.delete<RestResponse<null>>(`/api/guard/urls/${uuid}`);
+        const response = await api.delete<RestResponse<null>>(`/api/guard/short-urls/${uuid}`);
         return response.data;
     }
 }

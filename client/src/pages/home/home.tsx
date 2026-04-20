@@ -37,14 +37,14 @@ const HomePage = () => {
                 <div className="grid items-center gap-5 rounded-xl border border-[#d6e4fb] bg-linear-to-b from-[#f8fbff] to-white p-5 md:grid-cols-[1.2fr_0.8fr] md:p-8">
                     <div>
                         <p className="text-sm font-semibold text-[#1a73e8]">GMS Cloud</p>
-                        <h1 className="mt-2 text-3xl font-semibold leading-tight text-gray-900 md:text-5xl">
+                        <h1 className="bottom-to-top mt-2 text-3xl font-semibold leading-tight text-gray-900 md:text-5xl">
                             Nơi mọi file và URL của bạn được sắp xếp rõ ràng.
                         </h1>
-                        <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-500 md:text-base">
+                        <p className="bottom-to-top mt-4 max-w-2xl text-sm leading-6 text-gray-500 md:text-base">
                             Lưu trữ file, chia sẻ ảnh bằng link public, theo dõi plan và quản lý API token trong cùng một dashboard.
                         </p>
 
-                        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                        <div className="left-to-right mt-6 flex flex-col gap-3 sm:flex-row">
                             <Link
                                 to="/auth/register"
                                 className="inline-flex items-center justify-center rounded-md bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
@@ -62,7 +62,7 @@ const HomePage = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-center">
+                    <div className="top-to-bottom flex justify-center">
                         {createElement("dotlottie-wc", {
                             src: "https://lottie.host/a76e30db-976c-45e7-9bed-efe7c84c8317/GKUs9NOScO.lottie",
                             style: { width: "280px", height: "280px" },
@@ -73,16 +73,18 @@ const HomePage = () => {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
-                    {highlights.map((item) => (
-                        <article key={item.title} className="rounded-lg border border-gray-300/90 bg-white p-4">
+                    {highlights.map((item, idx) => (
+                        <article key={item.title} className="bottom-to-top rounded-lg border border-gray-300/90 bg-white p-4"
+                            style={{ animationDelay: `${idx * 0.15}s` }}
+                        >
                             <p className="text-base font-semibold text-gray-900">{item.title}</p>
                             <p className="mt-2 text-sm leading-6 text-gray-500">{item.description}</p>
                         </article>
                     ))}
                 </div>
 
-                <div className="grid gap-4 rounded-xl border border-gray-300/90 bg-white p-5 md:grid-cols-[1.05fr_0.95fr] md:p-6">
-                    <div>
+                <div className="grid gap-4 rounded-xl border border-gray-300/90 bg-white p-5 md:grid-cols-[1.05fr_0.95fr] md:p-6 overflow-hidden">
+                    <div className="left-to-right">
                         <h2 className="text-xl font-semibold text-gray-900">Dịch vụ & tài liệu</h2>
                         <p className="mt-2 text-sm text-gray-500">Truy cập nhanh các khu vực chính và tài liệu tích hợp.</p>
 
@@ -129,7 +131,7 @@ const HomePage = () => {
                         </div>
                     </div>
 
-                    <div className="rounded-lg border border-[#d6e4fb] bg-linear-to-b from-[#f8fbff] to-white p-4">
+                    <div className="top-to-bottom rounded-lg border border-[#d6e4fb] bg-linear-to-b from-[#f8fbff] to-white p-4">
                         <h3 className="text-base font-semibold text-gray-900">Liên hệ triển khai</h3>
                         <p className="mt-1 text-sm text-gray-500">Sẵn sàng hỗ trợ tích hợp, vận hành và tùy biến dịch vụ.</p>
 

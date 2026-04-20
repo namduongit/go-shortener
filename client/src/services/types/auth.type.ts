@@ -21,12 +21,7 @@ type PlanDetailResponse = {
     storage_limit: number;
 }
 
-type ConfigDetailResponse = {
-    is_valid: boolean;
-    issue_at: number;
-    expires_in: number;
-}
-
+/** Type for the response */
 export type LoginResponse = {
     uuid: string;
     email: string;
@@ -39,10 +34,26 @@ export type RegisterResponse = {
     plan: PlanDetailResponse;
 }
 
-export type ConfigResponse = {
+export type Config = {
+    is_valid: boolean;
+    issue_at: number;
+    expires_in: number;
+}
+
+export type Usage = {
+    plan_uuid: string;
+    total_bytes: number;
+    quota_bytes: number;
+    used_storage: number;
+    reserved_bytes: number;
+}
+
+export type AuthConfigResponse = {
     uuid: string;
     email: string;
-    config: ConfigDetailResponse;
+    plan_name: string;
+    usage: Usage;
+    config: Config;
 }
 
 export type LogoutResponse = null;

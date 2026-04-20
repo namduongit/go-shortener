@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import type { RegisterResponse, RegisterForm } from "../../../services/types/auth.type";
 
 import PublicLayout from "../../../components/layout/public-layout";
+import Button from "../../../components/ui/button/button";
 import { AuthModule } from "../../../services/modules/auth.module";
 import { useExecute } from "../../../common/hooks/useExecute";
 import { useNotificate } from "../../../common/hooks/useNotificate";
@@ -13,7 +14,7 @@ const inputClasses =
 
 const RegisterPage = () => {
 	const { Register } = AuthModule;
-	const { execute } = useExecute<RegisterResponse>();
+	const { execute, loading } = useExecute<RegisterResponse>();
 	const notificate = useNotificate();
 	const navigate = useNavigate();
 
@@ -41,23 +42,45 @@ const RegisterPage = () => {
 		event.preventDefault();
 
 		if (!form.email || !form.password || !form.password_confirm) {
+			notificate.showToast({
+				type: "warning",
+				title: "Thông tin chưa đầy đủ",
+				message: "Vui lòng điền đầy đủ thông tin đăng ký."
+			});
 			return;
 		}
 
 		execute(() => Register(form), {
 			onError: () => {
+				if (form.password !== form.password_confirm) {
+					notificate.showToast({
+						type: "error",
+						title: "Lỗi đăng ký",
+						message: "Mật khẩu và xác nhận mật khẩu không khớp."
+					});
+
+					return;
+				}
+
 				notificate.showToast({
 					type: "error",
 					title: "Đăng ký thất bại",
 					message: "Vui lòng kiểm tra lại thông tin đăng ký."
 				});
 			},
-			onSuccess: () => {
-				notificate.showToast({
-					type: "success",
-					title: "Thành công",
-					message: "Đăng ký thành công, bạn có thể đăng nhập ngay bây giờ."
+			onSuccess: async () => {
+				// notificate.showToast({
+				// 	type: "success",
+				// 	title: "Thành công",
+				// 	message: "Đăng ký thành công, bạn có thể đăng nhập ngay bây giờ."
+				// });
+				await notificate.showAlert({
+					title: "Đăng ký thành công",
+					message: "Để kích hoạt tài khoản, vui lòng kiểm tra email và xác nhận liên kết được gửi đến hộp thư của bạn. Sau khi kích hoạt, bạn có thể đăng nhập và bắt đầu sử dụng dịch vụ.",
 				});
+
+				console.log("Alert dismissed, navigating to login...");
+
 				new Promise(() => setTimeout(() => navigate("/auth/login"), 300));
 			}
 		});
@@ -66,7 +89,7 @@ const RegisterPage = () => {
 	return (
 		<PublicLayout>
 			<div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr]">
-				<section className="rounded-lg border border-[#d6e4fb] bg-linear-to-b from-[#f8fbff] to-white p-6 md:p-8">
+				<section className="bottom-to-top rounded-lg border border-[#d6e4fb] bg-linear-to-b from-[#f8fbff] to-white p-6 md:p-8">
 					<p className="text-sm font-semibold text-[#1a73e8]">Tạo tài khoản</p>
 					<h1 className="mt-2 text-3xl font-semibold text-gray-900 md:text-4xl">Bắt đầu với GMS Cloud</h1>
 					<p className="mt-4 text-sm leading-6 text-gray-500">
@@ -83,7 +106,7 @@ const RegisterPage = () => {
 					</div>
 				</section>
 
-				<section className="flex items-center rounded-lg border border-gray-300/90 bg-white p-6 md:p-8">
+				<section className="top-to-bottom flex items-center rounded-lg border border-gray-300/90 bg-white p-6 md:p-8">
 					<form className="mx-auto w-full max-w-md space-y-5" onSubmit={handleSubmit}>
 						<div>
 							<label className="text-sm font-semibold text-gray-900" htmlFor="email">
@@ -97,7 +120,6 @@ const RegisterPage = () => {
 								className={inputClasses}
 								value={form.email}
 								onChange={handleChange}
-								required
 							/>
 						</div>
 
@@ -113,7 +135,6 @@ const RegisterPage = () => {
 								className={inputClasses}
 								value={form.password}
 								onChange={handleChange}
-								required
 							/>
 						</div>
 
@@ -129,7 +150,6 @@ const RegisterPage = () => {
 								className={inputClasses}
 								value={form.password_confirm}
 								onChange={handleChange}
-								required
 							/>
 						</div>
 
@@ -137,12 +157,14 @@ const RegisterPage = () => {
 							Bằng cách tạo tài khoản, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của hệ thống.
 						</p>
 
-						<button
+						<Button
 							type="submit"
-							className="w-full rounded-md bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+							className="w-full flex justify-center rounded-md bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+							disabled={loading}
+							loadingText="Đang tạo tài khoản..."
 						>
 							Tạo tài khoản
-						</button>
+						</Button>
 
 						<p className="text-center text-sm text-gray-500">
 							Đã có tài khoản?{' '}

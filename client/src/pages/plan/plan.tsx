@@ -3,38 +3,31 @@ import PlanCard from "../../components/ui/plan-card/plan-card";
 import { PlanModule } from "../../services/modules/plan.module";
 import { useExecute } from "../../common/hooks/useExecute";
 import type { PlanListResponse, PlanResponse } from "../../services/types/plan.type";
-import { usePlanUsage } from "../../common/hooks/usePlanUsage";
+import { useAuthenticate } from "../../common/hooks/useAuthenticate";
+import { formatFileSize } from "../../services/utils/file";
 
 const formatPrice = (price: number) => {
     if (price <= 0) {
         return "Miễn phí";
     }
-
-    // Format to VND price
-
     return `${price.toLocaleString("vi-VN")} VND`;
 };
 
-const formatLimit = (value: number, suffix: string) => {
+const formatStorageLimit = (value: number) => {
     if (value <= 0) {
-        return `Không giới hạn ${suffix}`;
+        return "Không giới hạn lưu trữ";
     }
-    
-    if (suffix === "URL") {
-        return `${value} ${suffix}`;
-    }
-
-    // Storage values are shown in GB.
-    const gbValue = value / 1024 / 1024 / 1024;
-
-    return `${gbValue.toFixed(2)} GB ${suffix}`;
-}
-
-const formatToGb = (value: number) => `${(value / 1024 / 1024 / 1024).toFixed(2)} GB`;
+    return `${formatFileSize(value)} lưu trữ`;
+};
 
 const PlanPage = () => {
-    const { myPlanUsage } = usePlanUsage();
-    const currentPlan = myPlanUsage?.plan;
+    const { authConfig } = useAuthenticate();
+    const usage = authConfig?.usage;
+
+    const currentPlan = {
+        uuid: usage?.plan_uuid ?? "",
+        name: authConfig?.plan_name ?? "",
+    };
 
     const { GetPlans } = PlanModule;
     const { execute, loading } = useExecute<PlanListResponse>();
@@ -47,7 +40,6 @@ const PlanPage = () => {
                     setPlans(data);
                     return;
                 }
-
                 setPlans([]);
             },
             onError: () => {
@@ -63,23 +55,21 @@ const PlanPage = () => {
     const planCards = useMemo(() => {
         return plans.map((plan) => {
             const isCurrentPlan = Boolean(
-                currentPlan && (plan.uuid === currentPlan.uuid || plan.name.toLowerCase() === currentPlan.name.toLowerCase())
+                plan.uuid === currentPlan.uuid ||
+                    plan.name.toLowerCase() === currentPlan.name.toLowerCase()
             );
 
             return {
-            key: plan.uuid,
-            title: plan.name,
-            price: formatPrice(plan.price),
-            description: `Gói ${plan.name} cho nhu cầu lưu trữ và quản lý URL.`,
-            features: [
-                formatLimit(plan.url_limit, "URL"),
-                formatLimit(plan.storage_limit, "GB lưu trữ"),
-            ],
-            highlight: isCurrentPlan,
-            isCurrentPlan,
-        };
+                key: plan.uuid,
+                title: plan.name,
+                price: formatPrice(plan.price),
+                description: `Gói ${plan.name} cho nhu cầu lưu trữ và chia sẻ tệp.`,
+                features: [formatStorageLimit(plan.storage_limit)],
+                highlight: isCurrentPlan,
+                isCurrentPlan,
+            };
         });
-    }, [plans, currentPlan]);
+    }, [plans, currentPlan.uuid, currentPlan.name]);
 
     return (
         <div className="space-y-4">
@@ -88,18 +78,18 @@ const PlanPage = () => {
                 <h1 className="mt-1 text-2xl font-semibold text-gray-900">Gói dịch vụ</h1>
                 <p className="mt-1 text-sm text-gray-500">Theo dõi mức sử dụng và so sánh các gói.</p>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="rounded-lg border border-gray-300/90 bg-white p-3">
                         <p className="text-xs font-semibold uppercase text-gray-500">Gói hiện tại</p>
-                        <p className="mt-1 text-sm font-semibold text-gray-900">{currentPlan?.name ?? "Chưa xác định"}</p>
-                    </div>
-                    <div className="rounded-lg border border-gray-300/90 bg-white p-3">
-                        <p className="text-xs font-semibold uppercase text-gray-500">URL đã dùng</p>
-                        <p className="mt-1 text-sm font-semibold text-gray-900">{myPlanUsage?.used_url ?? 0}/{formatLimit(currentPlan?.url_limit ?? 0, "URL")}</p>
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                            {currentPlan.name || "Chưa xác định"}
+                        </p>
                     </div>
                     <div className="rounded-lg border border-gray-300/90 bg-white p-3">
                         <p className="text-xs font-semibold uppercase text-gray-500">Dung lượng</p>
-                        <p className="mt-1 text-sm font-semibold text-gray-900">{formatToGb(myPlanUsage?.used_storage ?? 0)}/{formatToGb(myPlanUsage?.total_storage ?? 0)}</p>
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                            {formatFileSize(usage?.used_storage ?? 0)}/{formatFileSize(usage?.total_bytes ?? 0)}
+                        </p>
                     </div>
                 </div>
             </header>

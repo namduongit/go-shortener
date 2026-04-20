@@ -3,7 +3,7 @@ import { Link } from "react-router";
 
 const PublicLayout = ({ children }: { children: ReactNode }) => {
     return (
-        <div className="min-h-screen bg-[#f5f7fb] text-gray-900">
+        <div className="min-h-screen bg-gray-50 text-gray-900">
             <div className="mx-auto flex min-h-screen max-w-370 flex-col px-3 py-4 md:px-6 md:py-5">
                 <header className="mb-4 flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3 md:px-5">
                     <Link to="/" className="flex items-center gap-3">

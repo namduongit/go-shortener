@@ -52,7 +52,6 @@ const CreateFolderModal = ({ isOpen, onClose, onSubmit }: CreateFolderModalProps
                         <p className="mt-1 text-sm text-gray-500">Nhập tên thư mục mới để tạo nhanh.</p>
                     </div>
                     <Button
-                        type="button"
                         className="rounded-md border border-gray-300/90 px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50"
                         onClick={onClose}
                         disabled={isSubmitting}

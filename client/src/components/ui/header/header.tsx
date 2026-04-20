@@ -143,7 +143,7 @@ const Header = () => {
 
                 <div className="relative shrink-0">
                     <Button
-                        className="rounded-xl inline-flex items-center justify-center gap-3 border border-gray-300/90 bg-white px-3 py-2 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
+                        className="rounded-xl flex flex-row items-center justify-center gap-3 border border-gray-300/90 bg-white px-3 py-2 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
                         onClick={() => setOpen((prev) => !prev)}
                     >
                         <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#1a73e8] text-white">
@@ -154,7 +154,7 @@ const Header = () => {
                         </span>
                     </Button>
                     {open && (
-                        <div className="absolute right-0 mt-3 w-52 overflow-hidden rounded-xl border border-gray-300/90 bg-white shadow-sm">
+                        <div className="absolute right-0 mt-3 w-52 overflow-hidden rounded-xl border border-gray-300/90 bg-white shadow-sm z-10">
                             {[
                                 { label: "Thông tin", path: "/page/account/info" },
                                 { label: "Đấu API", path: "/page/account/api" },

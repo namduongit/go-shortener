@@ -77,7 +77,7 @@ const FileExplorer = ({
 
                         {openMenuKey === `folder-${folder.uuid}` && (
                             <div className="absolute right-0 top-8 z-10 w-44 bg-white p-1 shadow-lg">
-                                <button
+                                <Button
                                     type="button"
                                     className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
                                     onClick={(event) => {
@@ -87,8 +87,8 @@ const FileExplorer = ({
                                     }}
                                 >
                                     Sửa tên thư mục
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     type="button"
                                     className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                                     onClick={(event) => {
@@ -98,7 +98,7 @@ const FileExplorer = ({
                                     }}
                                 >
                                     Xóa thư mục
-                                </button>
+                                </Button>
                             </div>
                         )}
                     </div>

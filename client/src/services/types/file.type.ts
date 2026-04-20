@@ -1,6 +1,25 @@
-export type UploadFileForm = {
-    file: File;
-    folder?: string;
+export type PresignUploadForm = {
+    files: {
+        client_file_id: string;
+        name: string;
+        size: number;
+        type: string;
+    }[];
+    destination_uuid?: string;
+}
+
+export type PresignUploadResponse = {
+    client_file_id: string;
+    session_uuid: string;
+    mode: string; //  single or multipart
+    reason: string;
+    accepted: boolean;
+    expires_at: Date;
+    part_size: number;
+}
+
+export type SignUploadResponse = { 
+    upload_url: string; 
 }
 
 export type FileResponse = {

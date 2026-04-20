@@ -1,5 +1,5 @@
 import { NavLink } from "react-router";
-import { usePlanUsage } from "../../../common/hooks/usePlanUsage";
+import { useAuthenticate } from "../../../common/hooks/useAuthenticate";
 
 const links = [
     { to: "/page/files", label: "Quản lý file", description: "Kho tài liệu cá nhân" },
@@ -12,10 +12,10 @@ const toGb = (value: number) => value / 1024 / 1024 / 1024;
 const formatToGb = (value: number) => `${toGb(value).toFixed(2)} GB`;
 
 const Sidebar = () => {
-    const { myPlanUsage } = usePlanUsage();
+    const { authConfig } = useAuthenticate();
 
-    const usedStorage = myPlanUsage?.used_storage ?? 0;
-    const totalStorage = myPlanUsage?.total_storage ?? 0;
+    const usedStorage = authConfig?.usage.used_storage ?? 0;
+    const totalStorage = authConfig?.usage.quota_bytes ?? 0;
     const usedPercent = totalStorage > 0 ? Math.min(100, Math.round((usedStorage / totalStorage) * 100)) : 0;
 
     return (
@@ -51,7 +51,7 @@ const Sidebar = () => {
                     <span>Dung lượng</span>
                     <span>{usedPercent}%</span>
                 </div>
-                <p className="mt-1 text-xs font-semibold text-gray-900">Gói: {myPlanUsage?.plan.name ?? "Đang tải..."}</p>
+                <p className="mt-1 text-xs font-semibold text-gray-900">Gói: {authConfig?.plan_name ?? "Đang tải..."}</p>
                 <p className="mt-1 text-xs text-gray-500">Đã sử dụng {formatToGb(usedStorage)} / {formatToGb(totalStorage)}</p>
                 <div className="mt-4 h-1.5 rounded-full bg-[#dbe3f2]">
                     <div className="h-full rounded-full bg-[#1a73e8]" style={{ width: `${usedPercent}%` }}></div>

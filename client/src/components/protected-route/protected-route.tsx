@@ -8,20 +8,34 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ redirectPath = "/auth/login", children }: ProtectedRouteProps) => {
-    const { authConfig, checkingAuth } = useAuthenticate();
+    const { authConfig, state, initialized } = useAuthenticate();
 
-    if (checkingAuth) {
+    if (!initialized) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#f8f5ee]">
-                <div className="rounded-2xl border border-[#e0dacb] bg-white/90 px-8 py-6 text-center shadow-md">
-                    <p className="text-sm font-semibold tracking-wide text-[#7c6540] uppercase">Đang xác thực phiên</p>
-                    <p className="mt-2 text-sm text-[#4d493f]">Vui lòng chờ trong giây lát...</p>
+            <div className="flex gap-5 min-h-screen items-center justify-center bg-white">
+                <div className="loading flex flex-col gap-2">
+                    <div className="flex gap-2">
+                        <div className="w-4 h-4 bg-blue-500"></div>
+                        <div className="w-4 h-4 bg-green-500"></div>
+                    </div>
+                    <div className="flex gap-2">
+                        <div className="w-4 h-4 bg-green-500"></div>
+                        <div className="w-4 h-4 bg-blue-500"></div>
+                    </div>
+                </div>
+
+                <div className="flex gap-2 items-center">
+                    <span className="px-2 py-3 bg-blue-500 text-white font-semibold rounded shadow">GMS</span>
+                    <div className="flex flex-col">
+                        <span className="text-sm text-gray-600 font-semibold">WORK SPACE</span>
+                        <span className="text-sm font-semibold">CLOUD</span>
+                    </div>
                 </div>
             </div>
         );
     }
 
-    if (!authConfig) {
+    if (!authConfig || !state) {
         return <Navigate to={redirectPath} replace />;
     }
 

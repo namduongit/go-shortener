@@ -1,5 +1,6 @@
 import type { UrlResponse } from "../../../services/types/url.type";
 import { formatDate } from "../../../services/utils/date";
+import Button from "../button/button";
 
 interface UrlTableProps {
     paginatedUrls: UrlResponse[];
@@ -72,19 +73,21 @@ const UrlTable = ({
                             </div>
 
                             <div className="flex items-start justify-end gap-2">
-                                <button
+                                <Button
+                                    type="button"
                                     className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-900 hover:bg-gray-100"
                                     onClick={() => window.open(`${import.meta.env.VITE_ENDPOINT_SHORT_URL}/${item.code}`, "_blank", "noopener,noreferrer")}
                                 >
                                     Mở
                                     <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                    type="button"
                                     className="inline-flex items-center rounded-md border border-[#ef4444] px-3 py-1.5 text-xs font-semibold text-[#dc2626] hover:bg-[#fef2f2]"
                                     onClick={() => void onDelete(item.uuid)}
                                 >
                                     Xóa
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -116,21 +119,23 @@ const UrlTable = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button
+                        <Button
+                            type="button"
                             className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={onPreviousPage}
                             disabled={currentPage === 1}
                         >
                             Trước
-                        </button>
+                        </Button>
                         <span className="text-sm text-gray-500">Trang {currentPage}/{totalPages}</span>
-                        <button
+                        <Button
+                            type="button"
                             className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={onNextPage}
                             disabled={currentPage === totalPages}
                         >
                             Sau
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}

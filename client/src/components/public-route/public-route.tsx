@@ -12,7 +12,7 @@ const PublicRoute = ({ redirectPath = "/page/files", children }: PublicRouteProp
 
     if (checkingAuth) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
                 <div className="rounded-2xl border border-gray-300/90 bg-white px-8 py-6 text-center shadow-[0_14px_40px_rgba(34,61,102,0.09)]">
                     <p className="text-sm font-semibold tracking-[0.14em] text-gray-500 uppercase">Đang xác thực phiên</p>
                     <p className="mt-2 text-sm text-gray-500">Vui lòng chờ trong giây lát...</p>

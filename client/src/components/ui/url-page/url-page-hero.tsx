@@ -2,10 +2,9 @@ import Button from "../button/button";
 
 interface UrlPageHeroProps {
     onOpenCreate: () => void;
-    onSync: () => Promise<void>;
 }
 
-const UrlPageHero = ({ onOpenCreate, onSync }: UrlPageHeroProps) => {
+const UrlPageHero = ({ onOpenCreate }: UrlPageHeroProps) => {
     return (
         <header className="p-2 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -19,12 +18,6 @@ const UrlPageHero = ({ onOpenCreate, onSync }: UrlPageHeroProps) => {
                     onClick={onOpenCreate}
                 >
                     Tạo URL mới
-                </Button>
-                <Button
-                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                    onClick={() => void onSync()}
-                >
-                    Làm mới
                 </Button>
                 </div>
         </header>

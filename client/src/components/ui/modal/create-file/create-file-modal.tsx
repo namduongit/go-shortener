@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import Button from "../../button/button";
 import { formatFileSize } from "../../../../services/utils/file";
 
@@ -15,6 +15,51 @@ const CreateFileModal = ({ isOpen, onClose, onSubmit, destinationLabel = "root" 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+    // Convert FileList to Array and add client_file_id for each file
+    const handleFilePick = (files?: FileList | File[]) => {
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        setSelectedFiles(Array.from(files));
+    };
+
+    // Handle file input change
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        handleFilePick(event.target.files ?? undefined);
+        event.target.value = "";
+    };
+
+    // Handle file drop
+    const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        setIsDragging(false);
+        handleFilePick(event.dataTransfer.files ?? undefined);
+    };
+
+    // Handle submit -> Call with flow: PresignUpload -> SignUpload -> UploadFileToStorage -> CompleteUpload
+    const handleSubmit = async () => {
+        if (selectedFiles.length === 0 || isSubmitting) {
+            return;
+        }
+        onSubmit?.(selectedFiles);
+
+    };
+
+    // Remove a file from selected files
+    const handleRemoveFile = (targetFile: File) => {
+        setSelectedFiles((previous) =>
+            previous.filter(
+                (file) => !(file.name === targetFile.name && file.lastModified === targetFile.lastModified)
+            )
+        );
+    };
+
+    const totalSelectedSize = useMemo(() => {
+        if (!selectedFiles) return 0;
+        return selectedFiles.reduce((total, file) => total + file.size, 0);
+    }, [selectedFiles]);
+
     useEffect(() => {
         if (!isOpen) {
             setSelectedFiles([]);
@@ -27,49 +72,6 @@ const CreateFileModal = ({ isOpen, onClose, onSubmit, destinationLabel = "root" 
         return null;
     }
 
-    const handleFilePick = (files?: FileList | File[]) => {
-        if (!files || files.length === 0) {
-            return;
-        }
-
-        setSelectedFiles(Array.from(files));
-    };
-
-    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        handleFilePick(event.target.files ?? undefined);
-        event.target.value = "";
-    };
-
-    const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        setIsDragging(false);
-        handleFilePick(event.dataTransfer.files ?? undefined);
-    };
-
-    const handleSubmit = async () => {
-        if (selectedFiles.length === 0 || isSubmitting) {
-            return;
-        }
-
-        setIsSubmitting(true);
-
-        try {
-            await Promise.resolve(onSubmit?.(selectedFiles));
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleRemoveFile = (targetFile: File) => {
-        setSelectedFiles((previous) =>
-            previous.filter(
-                (file) => !(file.name === targetFile.name && file.lastModified === targetFile.lastModified)
-            )
-        );
-    };
-
-    const totalSelectedSize = selectedFiles.reduce((total, file) => total + file.size, 0);
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f2937]/45 px-4 py-6">
             <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow">
@@ -79,7 +81,7 @@ const CreateFileModal = ({ isOpen, onClose, onSubmit, destinationLabel = "root" 
                         <p className="mt-1 text-sm text-gray-500">Kéo thả hoặc chọn nhiều file từ máy của bạn.</p>
                     </div>
                     <Button
-                        
+
                         className="rounded-md border border-gray-300/90 px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50"
                         onClick={onClose}
                     >
@@ -89,9 +91,8 @@ const CreateFileModal = ({ isOpen, onClose, onSubmit, destinationLabel = "root" 
 
                 <div className="space-y-4 px-6 py-5">
                     <div
-                        className={`flex min-h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${
-                            isDragging ? "border-[#1a73e8] bg-[#f8fbff]" : "border-gray-300/90 bg-white"
-                        }`}
+                        className={`flex min-h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${isDragging ? "border-[#1a73e8] bg-[#f8fbff]" : "border-gray-300/90 bg-white"
+                            }`}
                         onDragEnter={(event) => {
                             event.preventDefault();
                             setIsDragging(true);

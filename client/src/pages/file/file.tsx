@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useExecute } from "../../common/hooks/useExecute";
-import { usePlanUsage } from "../../common/hooks/usePlanUsage";
+import { v4 as uuidv4 } from "uuid";
 import { useNotificate } from "../../common/hooks/useNotificate";
 import { FileModule } from "../../services/modules/file.module";
 import { FolderModule } from "../../services/modules/folder.module";
-import type { FileListResponse, FileResponse } from "../../services/types/file.type";
+import type { FileListResponse, FileResponse, PresignUploadForm, PresignUploadResponse, SignUploadResponse } from "../../services/types/file.type";
 import type { FolderListResponse, FolderResponse } from "../../services/types/folder.type";
 import FileExplorer from "../../components/ui/file-page/file-explorer";
 import Button from "../../components/ui/button/button";
@@ -13,29 +13,41 @@ import CreateFileModal from "../../components/ui/modal/create-file/create-file-m
 import RenameFolderModal from "../../components/ui/modal/rename-folder/rename-folder-modal";
 import ShareFileModal from "../../components/ui/modal/share-file/share-file-modal";
 import SideFile from "../../components/ui/sidefile/sidefile";
+import type { AxiosRequestConfig } from "axios";
+import axios from "axios";
+import { UploadModule } from "../../services/modules/upload.module";
 
 const FilePage = () => {
-    const { GetFiles, ShareFile, UnshareFile, DownloadFile, DeleteFile } = FileModule;
+    const {
+        GetFiles,
+        ShareFile, UnshareFile,
+        DownloadFile, DeleteFile
+    } = FileModule;
     const { GetFolders, CreateFolder, RenameFolder, DeleteFolder } = FolderModule;
-    const { addFileToUploadQueue, refreshPlanUsage } = usePlanUsage();
+    const { PresignUpload, SignUpload, UploadPart, CompeltePart } = UploadModule;
+
     const { showToast } = useNotificate();
 
-    const [files, setFiles] = useState<FileResponse[]>([]);
     const [folders, setFolders] = useState<FolderResponse[]>([]);
     const [currentFolder, setCurrentFolder] = useState<FolderResponse | null>(null);
     const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
-    const [isCreateFileModalOpen, setIsCreateFileModalOpen] = useState(false);
     const [isRenameFolderModalOpen, setIsRenameFolderModalOpen] = useState(false);
     const [targetRenameFolder, setTargetRenameFolder] = useState<FolderResponse | null>(null);
+
+    const [files, setFiles] = useState<FileResponse[]>([]);
+    const [isCreateFileModalOpen, setIsCreateFileModalOpen] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [selectedShareFile, setSelectedShareFile] = useState<FileResponse | null>(null);
     const [selectedPreviewImage, setSelectedPreviewImage] = useState<FileResponse | null>(null);
 
-    const { execute: executeGetFiles } = useExecute<FileListResponse>();
     const { execute: executeGetFolders } = useExecute<FolderListResponse>();
     const { execute: executeCreateFolder } = useExecute<FolderResponse>();
     const { execute: executeRenameFolder } = useExecute<FolderResponse>();
     const { execute: executeDeleteFolder } = useExecute<null>();
+
+    const { executeWithDeclareResponse } = useExecute();
+    const { execute: executeGetFiles } = useExecute<FileListResponse>();
+    const { execute: executeDeleteFile } = useExecute<any>();
     const { execute: executeShareFile, loading: sharingFile } = useExecute<FileResponse>();
     const { execute: executeUnshareFile, loading: unsharingFile } = useExecute<FileResponse>();
 
@@ -89,11 +101,141 @@ const FilePage = () => {
         return Boolean(createdFolder);
     };
 
-    const handleUploadFiles = async (files: File[]) => {
-        const uploadedFiles = await addFileToUploadQueue(files, currentFolder?.uuid ?? undefined);
+    const handleSignUpload = async (
+        dataSet: PresignUploadResponse,
+        file: File
+    ) => {
+        /** Single mode */
+        if (dataSet.mode === "single") {
+            const sign = await executeWithDeclareResponse<SignUploadResponse>(() => SignUpload(dataSet.session_uuid));
+            if (!sign) {
+                showToast({
+                    type: "error",
+                    title: "Upload thất bại",
+                    message: `Không thể upload file ${file.name} vào lúc này. Vui lòng thử lại.`,
+                });
+                return;
+            }
 
-        if (uploadedFiles.length > 0) {
-            setFiles((previous) => [...uploadedFiles, ...previous]);
+            // Upload file to storage with the sign upload url and session id as a header
+            const config: AxiosRequestConfig = {
+                url: sign.upload_url,
+                method: "PUT",
+                data: file,
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                }
+            }
+
+            const result = await axios.request(config);
+            
+            if (result.status === 200) {
+                // Call complete upload API to complete the upload process
+                CompeltePart(dataSet.session_uuid);
+            }
+        }
+
+        /** Multipart mode */
+        if (dataSet.mode === "multipart") {
+            // Split file into parts
+            const partCount = Math.ceil(file.size / dataSet.part_size);
+            const parts: {
+                number: number;
+                data: Blob
+            }[] = [];
+
+            for (let partNumber = 1; partNumber <= partCount; partNumber++) {
+                const start = (partNumber - 1) * dataSet.part_size;
+                const end = Math.min(start + dataSet.part_size, file.size);
+                    parts.push({
+                        number: partNumber,
+                        data: file.slice(start, end),
+                    });
+            }
+
+            for (const part of parts) {
+                const sign = await executeWithDeclareResponse<SignUploadResponse>(() => SignUpload(dataSet.session_uuid, part.number));
+                if (!sign) {
+                    showToast({
+                        type: "error",
+                        title: "Upload thất bại",
+                        message: `Không thể upload file ${file.name} vào lúc này. Vui lòng thử lại.`,
+                    });
+                    return;
+                }
+
+                const config: AxiosRequestConfig = {
+                    url: sign.upload_url,
+                    method: "PUT",
+                    data: part.data,
+                    headers: {
+                        "Content-Type": "application/octet-stream",
+                    }
+                }
+
+                const result = await axios.request(config);
+                if (result.status === 200) {
+                    const Etag = (result.headers.Etag || result.headers.etag) as string;
+
+                    const sizeBytes = part.data.size;
+                    // Send Etag & Session ID & Part Number to store to complete the part upload
+                    await UploadPart(dataSet.session_uuid, part.number, Etag.trim().replace(/"/g, ''), sizeBytes);
+                }
+            }
+
+            await CompeltePart(dataSet.session_uuid);
+
+        }
+
+
+    }
+
+    const handleUploadFiles = async (files: File[]) => {
+        try {
+            // Identify each file with a client_file_id
+            const fileMap = new Map<string, File>();
+            const metadata = files.map((file) => {
+
+                const client_file_id = uuidv4();
+                fileMap.set(client_file_id, file);
+
+                return {
+                    client_file_id,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                };
+            });
+            const presignData: PresignUploadForm = {
+                files: metadata
+            }
+
+            if (currentFolder) {
+                presignData.destination_uuid = currentFolder.uuid;
+            }
+
+            // Presign upload to get session ids 
+            const presignResponse = await executeWithDeclareResponse<PresignUploadResponse[]>(() => PresignUpload(presignData));
+
+            if (!presignResponse) throw new Error("Presign upload failed");
+
+            presignResponse.forEach(async (item) => {
+                if (item.accepted && item.session_uuid) {
+                    // Push to client state to show uploading status (Optional)
+
+                    // Call SignUpload to get the upload URL and then upload the file to the URL with the session id as a header
+                    handleSignUpload(item, fileMap.get(item.client_file_id)!);
+                } else {
+                    showToast({
+                        type: "error",
+                        title: "Không thể upload file",
+                        message: `File ${item.client_file_id} không được chấp nhận để upload. Lý do: ${item.reason}`,
+                    })
+                }
+            });
+
+        } catch (error: unknown) {
+
         }
 
         setIsCreateFileModalOpen(false);
@@ -308,25 +450,25 @@ const FilePage = () => {
         if (!confirmDelete) {
             return;
         }
-
-        try {
-            await DeleteFile(file.uuid);
-            setFiles((previous) => previous.filter((item) => item.uuid !== file.uuid));
-            setSelectedShareFile((previous) => (previous?.uuid === file.uuid ? null : previous));
-            setSelectedPreviewImage((previous) => (previous?.uuid === file.uuid ? null : previous));
-            void refreshPlanUsage();
-            showToast({
-                type: "success",
-                title: "Đã xóa file",
-                message: `${file.file_name} đã được xóa.`,
-            });
-        } catch {
-            showToast({
-                type: "error",
-                title: "Xóa file thất bại",
-                message: "Không thể xóa file. Vui lòng thử lại.",
-            });
-        }
+        await executeDeleteFile(() => DeleteFile(file.uuid), {
+            onSuccess: () => {
+                setFiles((previous) => previous.filter((item) => item.uuid !== file.uuid));
+                setSelectedShareFile((previous) => (previous?.uuid === file.uuid ? null : previous));
+                setSelectedPreviewImage((previous) => (previous?.uuid === file.uuid ? null : previous));
+                showToast({
+                    type: "success",
+                    title: "Đã xóa file",
+                    message: `${file.file_name} đã được xóa.`,
+                });
+            },
+            onError: () => {
+                showToast({
+                    type: "error",
+                    title: "Xóa file thất bại",
+                    message: `Không thể xóa file ${file.file_name}.`,
+                });
+            }
+        });
     };
 
     const handlePreviewImage = (file: FileResponse) => {

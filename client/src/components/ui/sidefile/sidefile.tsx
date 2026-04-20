@@ -1,10 +1,10 @@
 import { FileModule } from "../../../services/modules/file.module";
 import type { FileResponse } from "../../../services/types/file.type";
 import { useNotificate } from "../../../common/hooks/useNotificate";
-import { usePlanUsage } from "../../../common/hooks/usePlanUsage";
 import { formatDate } from "../../../services/utils/date";
 import { formatFileSize } from "../../../services/utils/file";
 import { useEffect, useState } from "react";
+import Button from "../button/button";
 
 interface SideFileProps {
     file: FileResponse;
@@ -16,7 +16,6 @@ interface SideFileProps {
 const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideFileProps) => {
     const { DownloadFile, DeleteFile } = FileModule;
     const { showToast } = useNotificate();
-    const { refreshPlanUsage } = usePlanUsage();
     const [previewError, setPreviewError] = useState(false);
 
     const isImageFile = file.content_type?.startsWith("image/") || file.file_type?.toLowerCase() === "image";
@@ -80,7 +79,6 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
                 title: "Đã xóa file",
                 message: `${file.file_name} đã được xóa.`,
             });
-            void refreshPlanUsage();
             onFileDeleted?.();
             onClose?.();
         } catch {
@@ -125,20 +123,20 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
                                     className="mt-2 w-full rounded-lg border border-gray-300/90 bg-white px-3 py-2 text-xs text-gray-700"
                                 />
                                 <div className="mt-2 flex items-center gap-2">
-                                    <button
+                                    <Button
                                         type="button"
                                         className="rounded-lg border border-gray-300/90 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
                                         onClick={() => void handleCopyPublicImageUrl()}
                                     >
                                         Copy link
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         type="button"
                                         className="rounded-lg bg-[#1a73e8] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
                                         onClick={handleOpenPublicImageUrl}
                                     >
                                         Mở link
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -161,24 +159,27 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
                 </div>
 
                 <div className="flex flex-col gap-2 pt-2">
-                    <button
+                    <Button
+                        type="button"
                         className="rounded-xl bg-[#1a73e8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                         onClick={() => void handleDownloadFile(file)}
                     >
                         Tải xuống
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        type="button"
                         className="rounded-xl border border-[#ef4444] px-4 py-2 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2]"
                         onClick={() => void handleDeleteFile(file)}
                     >
                         Xóa file
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        type="button"
                         className="rounded-xl border border-gray-300/90 px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-[#f8fafc]"
                         onClick={() => onClose?.()}
                     >
                         Đóng chi tiết
-                    </button>
+                    </Button>
                 </div>
             </div>
         </aside>

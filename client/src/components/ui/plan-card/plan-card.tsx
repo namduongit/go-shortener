@@ -1,3 +1,5 @@
+import Button from "../button/button";
+
 interface PlanCardProps {
 	title: string;
 	price: string;
@@ -27,7 +29,8 @@ const PlanCard = ({ title, price, description, features, highlight = false, acti
 				))}
 			</ul>
 
-			<button
+			<Button
+				type="button"
 				className={`mt-5 w-full rounded-md border px-4 py-2 text-sm font-semibold ${
 					highlight
 						? "border-[#1a73e8] bg-[#1a73e8] text-white hover:bg-blue-700"
@@ -35,7 +38,7 @@ const PlanCard = ({ title, price, description, features, highlight = false, acti
 				}`}
 			>
 				{actionLabel}
-			</button>
+			</Button>
 		</article>
 	);
 };

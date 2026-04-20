@@ -1,4 +1,5 @@
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
+import Button from "../../components/ui/button/button";
 
 type ToastOptions = {
     type: "info" | "success" | "warning" | "error";
@@ -12,6 +13,11 @@ type Toast = {
     expiresAt: number;
 }
 
+type AlertOptions = {
+    title: string;
+    message: string;
+}
+
 const TOAST_DURATION = 4000;
 
 const toastPalette: Record<ToastOptions["type"], { accent: string; surface: string; border: string }> = {
@@ -23,7 +29,7 @@ const toastPalette: Record<ToastOptions["type"], { accent: string; surface: stri
 
 interface NotificateContextType {
     showToast: (toast: ToastOptions) => void;
-    showAlert: () => void;
+    showAlert: (alert: AlertOptions) => Promise<void>;
     showConfirm: () => void;
 }
 
@@ -54,17 +60,48 @@ const NotificateProvider = ({ children }: { children: React.ReactNode }) => {
         }, TOAST_DURATION);
     }, [dismissToast]);
 
-    const showAlert = () => {
+    const [alertContent, setAlertContent] = useState<AlertOptions | null>(null);
+    const resolveRef = useRef<(value: void) => void | null>(null);
 
+    const showAlert = (alert: AlertOptions): Promise<void> => {
+        return new Promise((resolve) => {
+            setAlertContent(alert); // Cập nhật nội dung cần hiển thị
+            resolveRef.current = resolve; // Lưu resolve vào ref để gọi khi đóng alert
+        });
+    };
+
+    const dismissAlert = () => {
+        if (resolveRef.current) {
+            resolveRef.current(); // Call resolve  when alert is dismissed
+        }
+        resolveRef.current = null; // Reset ref
+        setAlertContent(null); // Ẩn alert
+    };
+
+    const [confirmContent, setConfirmContent] = useState<AlertOptions | null>(null);
+    const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
+    const showConfirm = (): Promise<boolean> => {
+        return new Promise((resolve) => {
+            setConfirmContent({
+                title: "Xác nhận hành động",
+                message: "Bạn có chắc chắn muốn thực hiện hành động này?"
+            });
+            confirmResolveRef.current = resolve;
+        });
     }
 
-    const showConfirm = () => {
-
+    const dismissConfirm = (result: boolean) => {
+        if (confirmResolveRef.current) {
+            confirmResolveRef.current(result);
+        }
+        confirmResolveRef.current = null;
+        setConfirmContent(null);
     }
 
     /** Init value to test */
     useEffect(() => {
         // showToast({ type: "success", title: "Thành công", message: "Đăng nhập thành công!" });
+        // showAlert({ title: "Thông báo", message: "Đây là một thông báo quan trọng!" });
     }, []);
 
     useEffect(() => {
@@ -82,7 +119,7 @@ const NotificateProvider = ({ children }: { children: React.ReactNode }) => {
             case "warning":
                 return "!";
             case "error":
-                return "×";
+                return "x";
             default:
                 return "";
         }
@@ -91,40 +128,56 @@ const NotificateProvider = ({ children }: { children: React.ReactNode }) => {
     return (
         <NotificateContext.Provider value={{ showToast, showAlert, showConfirm }}>
             <div
-                className="pointer-events-none fixed right-4 top-4 z-50 flex w-[min(100%-2rem,22rem)] flex-col gap-3"
-                aria-live="polite"
-                aria-atomic="true"
+                className="z-100"
             >
-                {toasts.map((toast) => {
-                    const { accent, surface, border } = toastPalette[toast.options.type];
+                {/* Toasts */}
+                <div className="fixed top-4 right-4 z-50 flex w-full max-w-sm flex-col gap-3">
+                    {toasts.map((toast, idx) => {
+                        const { accent, surface, border } = toastPalette[toast.options.type];
 
-                    return (
-                        <article
-                            key={toast.id}
-                            className="pointer-events-auto flex items-center gap-4 rounded-2xl border px-4 py-3 shadow-[0_12px_30px_rgba(34,61,102,0.12)]"
-                            style={{ backgroundColor: surface, borderColor: border }}
-                            aria-live="assertive"
-                        >
-                            <div
-                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold"
-                                style={{ backgroundColor: accent, color: "white" }}
+                        return (
+                            <article
+                                key={toast.id}
+                                className="toast pointer-events-auto flex items-center gap-4 rounded-xl border px-4 py-3 shadow-[0_12px_30px_rgba(34,61,102,0.12)]"
+                                style={{ backgroundColor: surface, borderColor: border, animationDelay: `${idx * 0.1}s` }}
+                                aria-live="assertive"
                             >
-                                {getToastIconLabel(toast.options.type)}
+                                <div
+                                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold"
+                                    style={{ backgroundColor: accent, color: "white" }}
+                                >
+                                    {getToastIconLabel(toast.options.type)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold text-gray-900">{toast.options.title}</p>
+                                    <p className="mt-1 text-sm leading-5 text-gray-500">{toast.options.message}</p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    className="mt-0.5 rounded-full px-2 py-1 text-base font-semibold text-gray-500 transition hover:bg-white/70 hover:text-gray-900"
+                                    onClick={() => dismissToast(toast.id)}
+                                >
+                                    x
+                                </Button>
+                            </article>
+                        );
+                    })}
+                </div>
+
+                {/* Alert */}
+                {alertContent && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="w-full max-w-md rounded-lg bg-white p-4">
+                            <h2 className="text-xl font-semibold text-gray-900">{alertContent.title}</h2>
+                            <p className="mt-4 text-sm text-gray-700">{alertContent.message}</p>
+                            <div className="mt-6 flex justify-end">
+                                <Button
+                                    className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700"
+                                    onClick={dismissAlert}>Đồng ý</Button>
                             </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-gray-900">{toast.options.title}</p>
-                                <p className="mt-1 text-sm leading-5 text-gray-500">{toast.options.message}</p>
-                            </div>
-                            <button
-                                
-                                className="mt-0.5 rounded-full px-2 py-1 text-base font-semibold text-gray-500 transition hover:bg-white/70 hover:text-gray-900"
-                                onClick={() => dismissToast(toast.id)}
-                            >
-                                ×
-                            </button>
-                        </article>
-                    );
-                })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {children}

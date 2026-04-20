@@ -21,12 +21,9 @@ export const useExecute = <T>() => {
 
             console.log("======= Result debug: ", result);
 
-            
-            if (typeof result.data !== "undefined") {
-                setData(result.data);
-                options?.onSuccess?.(result.data);
-                return result.data;
-            }
+            setData(result.data);
+            options?.onSuccess?.(result.data);
+            return result.data;
 
         } catch (error: unknown) {
             console.log("=======    Error debug: ", error);
@@ -39,5 +36,30 @@ export const useExecute = <T>() => {
         return undefined;
     }
 
-    return { loading, error, data, execute };
+    const executeWithDeclareResponse = async <R>(
+        func: () => Promise<RestFulResponse<R>>,
+        options?: ExecuteOptions
+    ): Promise<R | undefined> => {
+        try {
+            setLoading(true);
+            const result = await func();
+
+            console.log("======= Result debug: ", result);
+
+            setData(result.data as unknown as T);
+            options?.onSuccess?.(result.data);
+            return result.data;
+
+        } catch (error: unknown) {
+            console.log("=======    Error debug: ", error);
+            setError(error);
+            options?.onError?.(error);
+        } finally {
+            setLoading(false);
+        }
+
+        return undefined;
+    }
+
+    return { loading, error, data, execute, executeWithDeclareResponse };
 }

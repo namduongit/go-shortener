@@ -170,7 +170,6 @@ const UrlPage = () => {
         <div className="space-y-4">
             <UrlPageHero
                 onOpenCreate={() => setIsCreateModalOpen(true)}
-                onSync={handleReload}
             />
 
             <section>

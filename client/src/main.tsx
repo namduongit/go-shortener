@@ -13,7 +13,6 @@ import ProtectedRoute from './components/protected-route/protected-route'
 import PublicRoute from './components/public-route/public-route'
 import DashboardLayout from './components/layout/dashboard-layout'
 import HomePage from './pages/home/home'
-import PlanUsageProvider from './common/contexts/plan-usage'
 
 createRoot(document.getElementById('root')!).render(
   <NotificateProvider>
@@ -23,9 +22,7 @@ createRoot(document.getElementById('root')!).render(
           <Route element={<ProtectedRoute />}>
 
             <Route element={
-              <PlanUsageProvider>
                 <DashboardLayout />
-              </PlanUsageProvider>
             }>
 
               <Route path="/page/urls" element={<UrlPage />} />
