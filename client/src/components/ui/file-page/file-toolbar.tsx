@@ -23,16 +23,13 @@ const FileToolbar = ({
 
     return (
         <div className="flex items-center justify-between gap-4">
-            {/* Left: breadcrumb + title */}
             <div className="min-w-0">
-                {/* Breadcrumb */}
                 <nav className="flex items-center gap-1 text-sm text-gray-500">
                     <Button
-                        className={`rounded px-1 py-0.5 font-medium transition-colors ${
-                            currentFolderPath.length === 0
+                        className={`rounded px-1 py-0.5 font-medium transition-colors ${currentFolderPath.length === 0
                                 ? "text-gray-900 cursor-default"
                                 : "hover:bg-gray-100 hover:text-gray-900"
-                        }`}
+                            }`}
                         onClick={onNavigateToRoot}
                         disabled={currentFolderPath.length === 0}
                     >
@@ -52,13 +49,11 @@ const FileToolbar = ({
                     ))}
                 </nav>
 
-                {/* Title */}
                 <h1 className="mt-0.5 text-xl font-semibold text-gray-900">
                     {currentFolder ? currentFolder.name : "Tệp của tôi"}
                 </h1>
             </div>
 
-            {/* Right: actions */}
             <div className="flex shrink-0 items-center gap-2">
                 {currentFolderPath.length > 0 && (
                     <Button
@@ -70,7 +65,6 @@ const FileToolbar = ({
                     </Button>
                 )}
 
-                {/* Create dropdown */}
                 <div className="relative">
                     <Button
                         className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"

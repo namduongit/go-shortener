@@ -67,7 +67,6 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
 
     return (
         <aside className="flex flex-col h-full overflow-y-auto bg-white border-l border-gray-100">
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Chi tiết
@@ -81,7 +80,6 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
             </div>
 
             <div className="flex flex-col gap-5 p-4">
-                {/* File identity */}
                 <div className="flex items-start gap-3">
                     <img
                         src={getIconForFileType(file.content_type)}
@@ -96,7 +94,6 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
                     </div>
                 </div>
 
-                {/* Image preview */}
                 {isImageFile && (
                     <div className="overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
                         {!previewError ? (
@@ -114,7 +111,6 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
                     </div>
                 )}
 
-                {/* Metadata */}
                 <div className="space-y-0 rounded-lg border border-gray-100 overflow-hidden text-sm">
                     {[
                         { label: "Dung lượng", value: formatFileSize(file.size) },
@@ -128,7 +124,6 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
                     ))}
                 </div>
 
-                {/* Public link (image only) */}
                 {isImageFile && (
                     <div className="space-y-2">
                         <p className="text-xs font-semibold text-gray-500">Link public</p>
@@ -158,7 +153,6 @@ const SideFile = ({ file, onClose, onFileDeleted, resolveFileFolderName }: SideF
                     </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex flex-col gap-2 pt-1">
                     <Button
                         type="button"

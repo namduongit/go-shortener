@@ -1,10 +1,18 @@
 package request
 
+type ConflictStrategy string
+
+const (
+	ConflictStrategyOverwrite ConflictStrategy = "overwrite"
+	ConflictStrategyKeep     ConflictStrategy = "keep"
+)
+
 type MetadataFile struct {
-	ClientFileID string `json:"client_file_id" validate:"required"`
-	Name         string `json:"name" validate:"required"`
-	Size         uint64 `json:"size" validate:"required"`
-	ContentType  string `json:"type" validate:"required"`
+	ClientFileID     string           `json:"client_file_id" validate:"required"`
+	Name             string           `json:"name" validate:"required"`
+	Size             uint64           `json:"size" validate:"required"`
+	ContentType      string           `json:"type" validate:"required"`
+	ConflictStrategy ConflictStrategy `json:"conflict_strategy"`
 }
 
 type PresignUploadRequest struct {

@@ -13,12 +13,13 @@ const inputCls =
 const defaultTokenForm: CreateTokenForm = { name: "", time: 0 };
 
 const AccountApiPage = () => {
-    const { GetToken, CreateToken, DeleteToken } = TokenModule;
+    const { GetTokens, CreateToken, DeleteToken, RenewToken } = TokenModule;
     const notificate = useNotificate();
 
     const { execute: executeGetTokens, loading: loadingTokens } = useExecute<TokenListResponse>();
     const { execute: executeCreateToken, loading: creatingToken } = useExecute<TokenResponse>();
     const { execute: executeDeleteToken } = useExecute<null>();
+    const { execute: executeRenewToken } = useExecute<TokenResponse>();
 
     const [tokens, setTokens] = useState<TokenResponse[]>([]);
     const [form, setForm] = useState<CreateTokenForm>(defaultTokenForm);
@@ -70,7 +71,8 @@ const AccountApiPage = () => {
     };
 
     const handleDeleteToken = async (uuid: string) => {
-        if (!window.confirm("Bạn có chắc muốn xóa token này?")) return;
+        const ok = await notificate.showConfirm({ title: "Xóa token", message: "Token này sẽ bị xóa vĩnh viễn và không thể khôi phục. Bạn có chắc không?" });
+        if (!ok) return;
 
         await executeDeleteToken(() => DeleteToken(uuid), {
             onSuccess: () => {
@@ -83,13 +85,25 @@ const AccountApiPage = () => {
         });
     };
 
+    const handleRenewToken = async (uuid: string) => {
+        await executeRenewToken(() => RenewToken(uuid, 30), {
+            onSuccess: (updated) => {
+                setTokens((prev) => prev.map((t) => (t.uuid === uuid ? updated : t)));
+                notificate.showToast({ type: "success", title: "Gia hạn thành công", message: "Token đã được gia hạn thêm 30 ngày." });
+            },
+            onError: () => {
+                notificate.showToast({ type: "error", title: "Gia hạn thất bại", message: "Không thể gia hạn token lúc này." });
+            },
+        });
+    };
+
     const handleFormChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: name === "time" ? Number(value) : value }));
     };
 
     useEffect(() => {
-        void executeGetTokens(() => GetToken(), {
+        void executeGetTokens(() => GetTokens(), {
             onSuccess: (data) => setTokens(data.tokens ?? []),
             onError: () => {
                 setTokens([]);
@@ -100,13 +114,11 @@ const AccountApiPage = () => {
 
     return (
         <div className="space-y-5">
-            {/* Page header */}
             <div>
                 <h1 className="text-xl font-semibold text-gray-900">API Keys</h1>
                 <p className="mt-0.5 text-sm text-gray-500">Tạo và quản lý token truy cập API của tài khoản.</p>
             </div>
 
-            {/* Create token form */}
             <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                 <div className="border-b border-gray-100 px-5 py-3.5">
                     <p className="text-sm font-semibold text-gray-900">Tạo token mới</p>
@@ -159,7 +171,6 @@ const AccountApiPage = () => {
                 </form>
             </div>
 
-            {/* Token list */}
             <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                 <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
                     <p className="text-sm font-semibold text-gray-900">Danh sách token</p>
@@ -196,11 +207,10 @@ const AccountApiPage = () => {
                                         </td>
                                         <td className="px-5 py-3.5">
                                             <span
-                                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
-                                                    isExpired(token)
+                                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${isExpired(token)
                                                         ? "border-red-200 bg-red-50 text-red-700"
                                                         : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className={`h-1.5 w-1.5 rounded-full ${isExpired(token) ? "bg-red-500" : "bg-emerald-500"}`} />
                                                 {isExpired(token) ? "Hết hạn" : "Hoạt động"}
@@ -218,6 +228,14 @@ const AccountApiPage = () => {
                                                 >
                                                     Copy
                                                 </Button>
+                                                {isExpired(token) && (
+                                                    <Button
+                                                        className="rounded-md border border-blue-200 bg-white px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors"
+                                                        onClick={() => void handleRenewToken(token.uuid)}
+                                                    >
+                                                        Gia hạn
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
                                                     onClick={() => void handleDeleteToken(token.uuid)}
@@ -234,7 +252,6 @@ const AccountApiPage = () => {
                 </div>
             </div>
 
-            {/* Token reveal modal */}
             <CreateTokenModal
                 isOpen={createdToken !== null}
                 publicToken={createdToken?.publicToken ?? ""}

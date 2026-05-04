@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { FileResponse } from "../../../services/types/file.type";
 import type { FolderResponse } from "../../../services/types/folder.type";
 import FileExplorer, { type ViewMode } from "./file-explorer";
@@ -8,6 +7,8 @@ interface FileListSectionProps {
     files: FileResponse[];
     folders: FolderResponse[];
     loading: boolean;
+    viewMode: ViewMode;
+    onViewModeChange: (mode: ViewMode) => void;
     onOpenFolder: (folder: FolderResponse) => void;
     onRenameFolder: (folder: FolderResponse) => void;
     onDeleteFolder?: (folder: FolderResponse) => void;
@@ -21,6 +22,8 @@ const FileListSection = ({
     files,
     folders,
     loading,
+    viewMode,
+    onViewModeChange,
     onOpenFolder,
     onRenameFolder,
     onDeleteFolder,
@@ -29,11 +32,9 @@ const FileListSection = ({
     onDownloadFile,
     onPreviewImage,
 }: FileListSectionProps) => {
-    const [viewMode, setViewMode] = useState<ViewMode>("list");
 
     return (
         <div className="bg-white">
-            {/* Toolbar: count + view toggle */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2">
                 <p className="text-xs text-gray-400">
                     {loading ? "Đang tải…" : `${folders.length} thư mục · ${files.length} tệp`}
@@ -41,23 +42,21 @@ const FileListSection = ({
                 <div className="flex items-center gap-0.5">
                     <Button
                         title="Danh sách"
-                        className={`rounded p-1.5 text-sm transition-colors ${
-                            viewMode === "list"
+                        className={`rounded p-1.5 text-sm transition-colors ${viewMode === "list"
                                 ? "bg-blue-50 text-blue-600"
                                 : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                        }`}
-                        onClick={() => setViewMode("list")}
+                            }`}
+                        onClick={() => onViewModeChange("list")}
                     >
                         <i className="fa-solid fa-list" />
                     </Button>
                     <Button
                         title="Lưới"
-                        className={`rounded p-1.5 text-sm transition-colors ${
-                            viewMode === "grid"
+                        className={`rounded p-1.5 text-sm transition-colors ${viewMode === "grid"
                                 ? "bg-blue-50 text-blue-600"
                                 : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                        }`}
-                        onClick={() => setViewMode("grid")}
+                            }`}
+                        onClick={() => onViewModeChange("grid")}
                     >
                         <i className="fa-solid fa-grip" />
                     </Button>

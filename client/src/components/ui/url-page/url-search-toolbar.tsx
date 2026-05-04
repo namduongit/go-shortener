@@ -10,7 +10,6 @@ interface UrlSearchToolbarProps {
 const UrlSearchToolbar = ({ searchInput, onSearchInputChange, onSearch, onReload }: UrlSearchToolbarProps) => {
     return (
         <div className="flex items-center gap-2 py-2">
-            {/* Search input */}
             <div className="flex h-9 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 focus-within:border-[#1a73e8] transition-colors max-w-md">
                 <i className="fa-solid fa-magnifying-glass text-xs text-gray-400" />
                 <input

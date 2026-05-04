@@ -14,5 +14,8 @@ type Folder struct {
 	TotalFile uint64
 	TotalSize uint64
 
+	// ParentFolderID *uint
+	// ParentFolder   *Folder `gorm:"foreignKey:ParentFolderID;references:ID"`
+
 	AccountID uint `gorm:"index"`
 }

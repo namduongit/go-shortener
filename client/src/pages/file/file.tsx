@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import type { SignUploadResponse, FileListResponse, FileMetadata, FileResponse, PartComplete, PresignUploadForm, PresignUploadResponse } from "../../services/types/file.type";
 import type { FolderDetailResponse, FolderListResponse, FolderResponse } from "../../services/types/folder.type";
 
@@ -9,7 +9,7 @@ import FileListSection from "../../components/ui/file-page/file-list-section";
 
 import CreateFolderModal from "../../components/ui/modal/folder/create/create";
 import RenameFolderModal from "../../components/ui/modal/folder/rename/rename";
-import CreateFileModal from "../../components/ui/modal/file/create/create";
+import UploadFileModal from "../../components/ui/modal/file/upload/create";
 
 import { FolderModule } from "../../services/modules/folder.module";
 import { FileModule } from "../../services/modules/file.module";
@@ -20,13 +20,17 @@ import { v4 } from "uuid";
 import axios from "axios";
 
 const FilePage = () => {
-    const { folderUUID } = useParams<{ folderUUID: string }>();
     const navigate = useNavigate();
+    const { folderUUID } = useParams<{ folderUUID: string }>();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const rawView = searchParams.get("view");
+    const viewMode = rawView === "grid" || rawView === "list" ? rawView : "list";
 
     const { executeWithDeclareResponse, loading } = useExecute();
     const { executeWithDeclareResponse: executeApi } = useExecute();
 
-    const { showToast, showAlert } = useNotificate();
+    const { showToast, showAlert, showFileConflict } = useNotificate();
 
     const { GetFolders, GetFolderByUuid, CreateFolder, RenameFolder } = FolderModule;
     const { GetFiles } = FileModule;
@@ -71,7 +75,7 @@ const FilePage = () => {
         fetchData();
     }, [folderUUID]);
 
-    // Modal states
+    // Folder modals states
     const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
     const [isRenameFolderOpen, setIsRenameFolderOpen] = useState(false);
 
@@ -98,16 +102,21 @@ const FilePage = () => {
         });
     }
 
-    const [isCreateFileOpen, setIsCreateFileOpen] = useState(false);
+    const handleDeleteFolder = async (uuid: string) => {
 
-    const handleUploadFiles = async (files: File[]) => {
+    }
+
+    // File modals state
+    const [isUploadFileOpen, setIsUploadFileOpen] = useState(false);
+
+    const handleUploadFiles = async (fileRequests: File[]) => {
         const mapFiles: Record<string, File> = {};
         const presignUploadData: PresignUploadForm = {} as PresignUploadForm;
-        const fileMetadatas: FileMetadata[] = files.map((file) => {
+        const fileMetadatas: FileMetadata[] = fileRequests.map((file) => {
             const client_file_id = v4();
             mapFiles[client_file_id] = file;
             return {
-                client_file_id,   // reuse same UUID — bug fix
+                client_file_id,
                 name: file.name,
                 size: file.size,
                 type: file.type,
@@ -119,6 +128,7 @@ const FilePage = () => {
             presignUploadData.destination_uuid = folderUUID;
         }
 
+        // First presign pass - detect conflicts
         const presignResponse = await executeApi<PresignUploadResponse[]>(
             () => PresignUpload(presignUploadData)
         );
@@ -131,15 +141,60 @@ const FilePage = () => {
             return;
         }
 
-        presignResponse.forEach((pres) => handleUploadFile(mapFiles[pres.client_file_id], pres));
+        // Separate conflict files vs accepted/other-rejected files
+        const conflictFiles = presignResponse.filter(p => p.reason === "conflict");
+        let finalPresignResponse = presignResponse.filter(p => p.reason !== "conflict");
+
+        if (conflictFiles.length > 0) {
+            // Close upload modal BEFORE showing conflict dialog
+            setIsUploadFileOpen(false);
+
+            const conflictFileNames = conflictFiles.map(p => p.file_name);
+            const choice = await showFileConflict({ files: conflictFileNames });
+
+            if (choice === 3) {
+                // User cancelled - abort everything
+                return;
+            }
+
+            if (choice === 1) {
+                // Remove old conflicting files from UI before uploading new ones
+                const conflictNames = new Set(conflictFiles.map(p => p.file_name));
+                setFiles(prev => prev.filter(f => !conflictNames.has(f.file_name)));
+
+                // Overwrite - re-presign conflict files with overwrite strategy
+                const overwriteData: PresignUploadForm = {
+                    files: conflictFiles.map(p => ({
+                        client_file_id: p.client_file_id,
+                        name: p.file_name,
+                        size: mapFiles[p.client_file_id].size,
+                        type: mapFiles[p.client_file_id].type,
+                        conflict_strategy: "overwrite" as const,
+                    })),
+                    ...(folderUUID ? { destination_uuid: folderUUID } : {}),
+                };
+
+                const overwriteResponse = await executeApi<PresignUploadResponse[]>(
+                    () => PresignUpload(overwriteData)
+                );
+
+                if (overwriteResponse) {
+                    finalPresignResponse = [...finalPresignResponse, ...overwriteResponse];
+                }
+            }
+            // choice === 2: skip conflict files, finalPresignResponse stays as-is (no conflict files)
+        }
+
+        finalPresignResponse.forEach((pres) => handleUploadFile(mapFiles[pres.client_file_id], pres));
 
         showToast({
             type: "success",
             title: "Thành công",
             message: "Các tệp đã tải lên thành công. Vui lòng kiểm tra."
         });
-        setIsCreateFileOpen(false);
+        setIsUploadFileOpen(false);
     }
+
 
     const handleUploadFile = async (file: File, presignData: PresignUploadResponse) => {
         if (!presignData.accepted) {
@@ -229,7 +284,7 @@ const FilePage = () => {
                 onNavigateToRoot={() => { if (folderUUID) navigate("/page/files"); }}
                 onNavigateToFolder={(folder) => navigate(`/page/files/${folder.uuid}`)}
                 onCreateFolder={() => setIsCreateFolderOpen(true)}
-                onUploadFiles={() => setIsCreateFileOpen(true)}
+                onUploadFiles={() => setIsUploadFileOpen(true)}
             />
 
             {/* Content + preview */}
@@ -238,6 +293,8 @@ const FilePage = () => {
                     files={files}
                     folders={folders}
                     loading={loading}
+                    viewMode={viewMode}
+                    onViewModeChange={(mode) => setSearchParams((prev) => { prev.set("view", mode); return prev; })}
                     onOpenFolder={(folder) => navigate(`/page/files/${folder.uuid}`)}
                     onRenameFolder={(folder) => {
                         setTargetRenameFolder(folder);
@@ -275,9 +332,9 @@ const FilePage = () => {
             />
 
             {/* File Action Modals */}
-            <CreateFileModal
-                isOpen={isCreateFileOpen}
-                onClose={() => setIsCreateFileOpen(false)}
+            <UploadFileModal
+                isOpen={isUploadFileOpen}
+                onClose={() => setIsUploadFileOpen(false)}
                 onSubmit={handleUploadFiles}
                 destinationLabel={folderPath.length > 0 ? `GMS Cloud › ${folderPath[0].name}` : "GMS Cloud"}
             />

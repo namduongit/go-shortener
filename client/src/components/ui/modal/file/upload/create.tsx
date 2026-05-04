@@ -8,7 +8,7 @@ type UploadFile = {
     status: "pending" | "uploading" | "done" | "error";
 };
 
-type CreateFileModalProps = {
+type UploadFileModalProps = {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (files: File[]) => void;
@@ -16,13 +16,13 @@ type CreateFileModalProps = {
     uploadProgress?: Record<string, number>; // filename → 0-100
 };
 
-const CreateFileModal = ({
+const UploadFileModal = ({
     isOpen,
     onClose,
     onSubmit,
     destinationLabel = "GMS Cloud",
     uploadProgress = {},
-}: CreateFileModalProps) => {
+}: UploadFileModalProps) => {
     const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,14 +95,12 @@ const CreateFileModal = ({
                     </button>
                 </div>
 
-                {/* Drop zone */}
                 {!isSubmitting && (
                     <div
-                        className={`mx-5 mt-4 flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-8 text-center transition-colors ${
-                            isDragging
-                                ? "border-blue-400 bg-blue-50"
-                                : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                        }`}
+                        className={`mx-5 mt-4 flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-8 text-center transition-colors ${isDragging
+                            ? "border-blue-400 bg-blue-50"
+                            : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                            }`}
                         onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragLeave={() => setIsDragging(false)}
@@ -132,7 +130,6 @@ const CreateFileModal = ({
                     </div>
                 )}
 
-                {/* File list */}
                 {uploadFiles.length > 0 && (
                     <div className="mx-5 mt-3 max-h-52 overflow-y-auto space-y-1.5 pr-1">
                         {uploadFiles.map((u) => {
@@ -187,7 +184,6 @@ const CreateFileModal = ({
                     </div>
                 )}
 
-                {/* Overall progress when submitting */}
                 {isSubmitting && (
                     <div className="mx-5 mt-3 space-y-1">
                         <div className="flex justify-between text-xs text-gray-500">
@@ -203,7 +199,6 @@ const CreateFileModal = ({
                     </div>
                 )}
 
-                {/* Footer */}
                 <div className="flex items-center justify-between px-5 py-4 mt-3">
                     {uploadFiles.length > 0 ? (
                         <p className="text-xs text-gray-400">
@@ -241,4 +236,4 @@ const CreateFileModal = ({
     );
 };
 
-export default CreateFileModal;
+export default UploadFileModal;

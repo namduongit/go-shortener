@@ -7,6 +7,7 @@ import (
 
 func BuildTmpKey(accountID uint, fileName string, folder *model.Folder) string {
 	var destination string
+	// destination += cfg.MinIOTmpBucketName + "/"
 	destination += strconv.Itoa(int(accountID)) + "/"
 	if folder != nil {
 		destination += strconv.FormatUint(uint64(folder.ID), 10) + "/"
@@ -17,7 +18,7 @@ func BuildTmpKey(accountID uint, fileName string, folder *model.Folder) string {
 
 func BuildFinalKey(accountID uint, fileName string, folder *model.Folder) string {
 	var destination string
-	destination += cfg.MiniOFinalBucketName + "/"
+	// destination += cfg.MiniOFinalBucketName + "/"
 	destination += strconv.Itoa(int(accountID)) + "/"
 	if folder != nil {
 		destination += strconv.FormatUint(uint64(folder.ID), 10) + "/"

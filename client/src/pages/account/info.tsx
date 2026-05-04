@@ -89,9 +89,7 @@ const AccountInfoPage = () => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            {/* ── Profile hero ─────────────────────────────────────────── */}
             <div className="flex items-center gap-5 border-b border-gray-100 pb-6">
-                {/* Avatar */}
                 <div className="relative shrink-0">
                     {hasAvatar ? (
                         <img
@@ -107,7 +105,6 @@ const AccountInfoPage = () => {
                     )}
                 </div>
 
-                {/* Name + email */}
                 <div className="min-w-0">
                     <h1 className="text-xl font-semibold text-gray-900 leading-tight truncate">
                         {form.full_name || email}
@@ -115,7 +112,6 @@ const AccountInfoPage = () => {
                     <p className="mt-0.5 text-sm text-gray-500 truncate">{email}</p>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {/* Plan badge */}
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                             <i className="fa-regular fa-gem text-[10px]" />
                             {planName}
@@ -126,7 +122,6 @@ const AccountInfoPage = () => {
                     </div>
                 </div>
 
-                {/* Save button — top right on desktop */}
                 <div className="ml-auto hidden sm:block">
                     <Button
                         type="submit"
@@ -138,9 +133,7 @@ const AccountInfoPage = () => {
                 </div>
             </div>
 
-            {/* ── Info fields ──────────────────────────────────────────── */}
             <div className="space-y-5">
-                {/* Row 1: Tên & Username */}
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label className="text-sm font-medium text-gray-700" htmlFor="full_name">
@@ -170,7 +163,6 @@ const AccountInfoPage = () => {
                     </div>
                 </div>
 
-                {/* Row 2: Công ty & SĐT */}
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label className="text-sm font-medium text-gray-700" htmlFor="company_name">
@@ -200,7 +192,6 @@ const AccountInfoPage = () => {
                     </div>
                 </div>
 
-                {/* Row 3: Avatar URL */}
                 <div>
                     <label className="text-sm font-medium text-gray-700" htmlFor="avatar_url">
                         Avatar URL
@@ -218,7 +209,6 @@ const AccountInfoPage = () => {
                     </p>
                 </div>
 
-                {/* Row 4: Địa chỉ */}
                 <div>
                     <label className="text-sm font-medium text-gray-700" htmlFor="address">
                         Địa chỉ
@@ -235,7 +225,6 @@ const AccountInfoPage = () => {
                 </div>
             </div>
 
-            {/* ── Footer actions (mobile) ───────────────────────────────── */}
             <div className="flex items-center justify-between border-t border-gray-100 pt-4 sm:hidden">
                 <p className="text-xs text-gray-400">
                     {loadingProfile ? "Đang tải…" : "Thay đổi sẽ được lưu ngay."}

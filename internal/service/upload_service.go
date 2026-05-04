@@ -1,8 +1,8 @@
 package service
 
 import (
+	"context"
 	"errors"
-	"log"
 	"time"
 	"url-shortener/internal/config"
 	"url-shortener/internal/http/request"
@@ -17,7 +17,6 @@ import (
 
 func BatchInit(c *gin.Context, accountID uint, files []request.MetadataFile, folderUUID string) (*[]response.PresignUploadResponse, error) {
 	folder, err := GetFolderByUUID(folderUUID)
-	log.Println(folder != nil)
 	if folderUUID != "" && err != nil {
 		return nil, errors.New("Destination not found")
 	}
@@ -40,25 +39,50 @@ func BatchInit(c *gin.Context, accountID uint, files []request.MetadataFile, fol
 				FileName:     file.Name,
 			}
 
-			// v := request.MetadataFile{
-			// 	ClientFileID: file.ClientFileID,
-			// 	Name:         file.Name,
-			// 	Size:         file.Size,
-			// 	ContentType:  file.ContentType,
-			// }
+			// Check conflict by BuildFinalKey - the storage_key is the source of truth
+			// for a file's unique location (accountID + folderID + fileName)
+			finalKey := utils.BuildFinalKey(accountID, file.Name, folder)
+			var existingFile model.File
+			existingErr := tx.Where("storage_key = ?", finalKey).First(&existingFile).Error
+			hasConflict := existingErr == nil // file with same key already exists
 
-			// if err := libs.WithBind(c, &v); err != nil {
-			// 	log.Printf("Failed to bind file metadata: %v", err.Error())
-			// 	p.Reason = err.Error()
-			// 	plans = append(plans, p)
-			// 	continue
-			// }
+			if hasConflict {
+				if file.ConflictStrategy == "" {
+					// No strategy provided → signal conflict back to client
+					p.Reason = "conflict"
+					plans = append(plans, p)
+					continue
+				}
+				if file.ConflictStrategy == request.ConflictStrategyKeep {
+					// Skip upload, keep existing
+					p.Reason = "skipped"
+					plans = append(plans, p)
+					continue
+				}
+				if file.ConflictStrategy == request.ConflictStrategyOverwrite {
+					// Delete old file from S3 and DB
+					go func(storageKey string) {
+						_ = config.DeleteObject(context.Background(), config.GetFinalBucketName(), storageKey)
+					}(existingFile.StorageKey)
 
-			if file.Size == 0 {
-				p.Reason = "File size must be greater than 0"
-				plans = append(plans, p)
-				continue
+					if err := tx.Unscoped().Delete(&existingFile).Error; err != nil {
+						p.Reason = "Failed to delete existing file: " + err.Error()
+						plans = append(plans, p)
+						continue
+					}
+					// Update account usage: subtract old file size
+					if err := tx.Model(&model.AccountUsage{}).
+						Where("account_id = ?", accountID).
+						Update("used_storage", gorm.Expr("GREATEST(used_storage - ?, 0)", existingFile.Size)).Error; err != nil {
+						p.Reason = "Failed to update storage usage: " + err.Error()
+						plans = append(plans, p)
+						continue
+					}
+					// Recalculate available after deletion
+					available += existingFile.Size
+				}
 			}
+
 			if available < file.Size {
 				p.Reason = "Not enough storage available"
 				plans = append(plans, p)
@@ -137,6 +161,11 @@ func BatchInit(c *gin.Context, accountID uint, files []request.MetadataFile, fol
 				p.PartSize = sizePart
 			}
 			plans = append(plans, p)
+
+			// Set upload session to redis
+			if err := SetUploadSession(c.Request.Context(), session.UUID.String(), session); err != nil {
+				return err
+			}
 		}
 
 		return tx.Save(&usage).Error
@@ -153,13 +182,20 @@ func safeSub(a, b uint64) uint64 {
 }
 
 func SignURLUpload(c *gin.Context, uuid string, request request.SignUploadRequest) ([]string, error) {
-	var session model.Session
-	if err := config.PostgresClient.Where("uuid = ?", uuid).First(&session).Error; err != nil {
-		return []string{}, err
-	}
+	// var session model.Session
+	// if err := config.PostgresClient.Where("uuid = ?", uuid).First(&session).Error; err != nil {
+	// 	return []string{}, err
+	// }
 
-	if time.Now().After(session.ExpiresAt) {
-		return []string{}, errors.New("Session has expired")
+	// if time.Now().After(session.ExpiresAt) {
+	// 	return []string{}, errors.New("Session has expired")
+	// }
+
+	// Use Redis to get session
+	session, err := GetUploadSession(c.Request.Context(), uuid)
+	if err != nil {
+		// Cron job will delete expired sessions
+		return nil, errors.New("Session not found")
 	}
 
 	// Single upload
@@ -179,8 +215,7 @@ func SignURLUpload(c *gin.Context, uuid string, request request.SignUploadReques
 		if session.S3UploadID == nil {
 			return []string{}, errors.New("Multipart upload not initialized")
 		}
-		log.Println(request.IsMulti != nil)
-		log.Println(len(request.Parts))
+
 		if request.IsMulti == nil || len(request.Parts) <= 0 {
 			return []string{}, errors.New("Invalid part number")
 		}
@@ -277,7 +312,7 @@ func CompleteMultipartUpload(c *gin.Context, uuid string, request request.Comple
 	}
 
 	// Complete multipart upload in tmp bucket, then move to final bucket
-	err := config.CompleteMultipart(c.Request.Context(), session.ObjectKeyTmp, session.ObjectKeyTmp, *session.S3UploadID, completedParts)
+	err := config.CompleteMultipart(c.Request.Context(), session.ObjectKeyTmp, session.ObjectKeyFinal, *session.S3UploadID, completedParts)
 	if err != nil {
 		return nil, err
 	}

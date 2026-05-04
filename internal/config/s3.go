@@ -107,15 +107,16 @@ func CompleteMultipart(ctx context.Context, objectKeyTmp string, objectKeyFinal 
 	_, err = S3Client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     aws.String(cfg.MiniOFinalBucketName),
 		Key:        aws.String(objectKeyFinal),
-		CopySource: aws.String(cfg.MinIOTmpBucketName + "/" + objectKeyFinal),
+		CopySource: aws.String(cfg.MinIOTmpBucketName + "/" + objectKeyTmp),
 	})
 	if err != nil {
 		return err
 	}
 
+	// Delete object in tmp bucket
 	_, err = S3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(cfg.MinIOTmpBucketName),
-		Key:    aws.String(objectKeyFinal),
+		Key:    aws.String(objectKeyTmp),
 	})
 	if err != nil {
 		return err
@@ -124,7 +125,6 @@ func CompleteMultipart(ctx context.Context, objectKeyTmp string, objectKeyFinal 
 	return nil
 }
 
-// Optionally, you can expose helpers for copy and delete if needed elsewhere
 func CopyObject(ctx context.Context, srcBucket, srcKey, dstBucket, dstKey string) error {
 	_, err := S3Client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     aws.String(dstBucket),
@@ -132,6 +132,10 @@ func CopyObject(ctx context.Context, srcBucket, srcKey, dstBucket, dstKey string
 		CopySource: aws.String(srcBucket + "/" + srcKey),
 	})
 	return err
+}
+
+func GetFinalBucketName() string {
+	return cfg.MiniOFinalBucketName
 }
 
 func DeleteObject(ctx context.Context, bucket, key string) error {
@@ -155,7 +159,7 @@ func PresignSingleUpload(ctx context.Context, objectKey string) (string, error) 
 	out, err := PresignClient.PresignPutObject(
 		ctx,
 		&s3.PutObjectInput{
-			Bucket: aws.String(cfg.MinIOTmpBucketName),
+			Bucket: aws.String(cfg.MiniOFinalBucketName),
 			Key:    aws.String(objectKey),
 		},
 		s3.WithPresignExpires(15*time.Minute),

@@ -3,7 +3,7 @@ import type { FileResponse } from "../../../services/types/file.type";
 import type { FolderResponse } from "../../../services/types/folder.type";
 import { formatDriveDate } from "../../../services/utils/date";
 import { formatFileSize, getIconForFileType } from "../../../services/utils/file";
-import folderIcon from "../../../assets/icons/folder-icon.png";
+// import folderIcon from "../../../assets/icons/folder-icon.png";
 import Button from "../button/button";
 
 export type ViewMode = "list" | "grid";
@@ -45,7 +45,7 @@ const FolderRow = ({
             onClick={onOpen}
         >
             <div className="flex items-center gap-2.5 truncate font-medium text-gray-800">
-                <img src={folderIcon} alt="" className="h-5 w-5 shrink-0" />
+                <i className="fa-solid fa-folder text-xl text-gray-600"></i>
                 <span className="truncate">{folder.name}</span>
             </div>
             <span className="text-gray-500 text-xs">{formatDriveDate(folder.created_at)}</span>
@@ -168,7 +168,6 @@ const FileRow = ({
     );
 };
 
-
 const FolderCard = ({
     folder,
     onOpen,
@@ -185,12 +184,44 @@ const FolderCard = ({
     setMenuKey: (k: string | null) => void;
 }) => {
     const key = `folder-${folder.uuid}`;
+    const [isDragOver, setIsDragOver] = useState<boolean>(false);
+
     return (
         <div
-            className="group relative flex flex-col gap-2 rounded-lg border border-gray-100 p-3 hover:bg-gray-50 transition-colors cursor-pointer select-none"
+            draggable
+            onDragStart={(e) => {
+                e.dataTransfer.setData("folder", JSON.stringify(folder));
+            }}
+            onDragEnter={() => {
+                setIsDragOver(true);
+            }}
+            onDragLeave={() => {
+                setIsDragOver(false);
+            }}
+
+            onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+            }}
+            onDrop={(e) => {
+                e.preventDefault();
+                const file = JSON.parse(e.dataTransfer.getData("file"));
+                const folder = JSON.parse(e.dataTransfer.getData("folder"));
+
+                if (file) {
+
+                }
+                else if (folder) {
+
+                }
+
+                setIsDragOver(false);
+            }}
+            className={`group relative flex flex-col gap-2 rounded-lg border ${isDragOver ? "border-blue-300 bg-blue-100" : "border-gray-100"} p-3 hover:bg-gray-50 transition-colors cursor-pointer select-none`}
             onClick={onOpen}
         >
-            <img src={folderIcon} alt="" className="h-10 w-10" />
+            {/* <img src={folderIcon} alt="" className="h-10 w-10" /> */}
+            <i className="fa-solid fa-folder text-5xl text-gray-600"></i>
             <p className="truncate text-sm font-medium text-gray-800">{folder.name}</p>
             <p className="text-xs text-gray-400">{folder.total_files} tệp · {formatFileSize(folder.total_size)}</p>
 
@@ -238,10 +269,14 @@ const FileCard = ({
     const key = `file-${file.uuid}`;
     return (
         <div
+            draggable
+            onDragStart={(e) => {
+                e.dataTransfer.setData("file", JSON.stringify(file));
+            }}
             className="group relative flex flex-col gap-2 rounded-lg border border-gray-100 p-3 hover:bg-gray-50 transition-colors select-none"
             onClick={() => isImage(file) && onPreview?.()}
         >
-            <img src={getIconForFileType(file.content_type)} alt="" className="h-10 w-10" />
+            <img src={getIconForFileType(file.content_type)} draggable={false} alt="File card" className="h-10 w-10" />
             <p className="truncate text-sm font-medium text-gray-800">{file.file_name}</p>
             <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
             {file.is_shared && (
@@ -280,7 +315,6 @@ const FileCard = ({
         </div>
     );
 };
-
 
 const FileExplorer = ({
     files,

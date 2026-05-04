@@ -1,8 +1,5 @@
 import { Link } from "react-router";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Data
-
 const endpoints = [
     {
         group: "Authentication",
@@ -70,7 +67,6 @@ const methodColor: Record<string, string> = {
     DELETE: "bg-red-50 text-red-700 border-red-200",
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 
 const DocumentPage = () => {
     return (
@@ -102,7 +98,6 @@ const DocumentPage = () => {
             </header>
 
             <div className="mx-auto max-w-5xl px-6 py-10">
-                {/* Hero */}
                 <div className="mb-10">
                     <p className="text-xs font-semibold uppercase tracking-widest text-[#1a73e8]">GMS Cloud</p>
                     <h1 className="mt-2 text-3xl font-semibold text-gray-900">API Reference</h1>
@@ -111,7 +106,6 @@ const DocumentPage = () => {
                         và yêu cầu xác thực cookie phiên (HttpOnly).
                     </p>
 
-                    {/* Auth note */}
                     <div className="mt-5 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                         <i className="fa-solid fa-circle-info mt-0.5 shrink-0 text-amber-500"></i>
                         <p>
@@ -121,7 +115,6 @@ const DocumentPage = () => {
                     </div>
                 </div>
 
-                {/* Endpoint groups */}
                 <div className="space-y-8">
                     {endpoints.map((group) => (
                         <section key={group.group}>
@@ -174,14 +167,12 @@ const DocumentPage = () => {
                     ))}
                 </div>
 
-                {/* Base URL */}
                 <div className="mt-10 rounded-lg border border-gray-200 bg-white p-5">
                     <h3 className="text-sm font-semibold text-gray-900">Base URL</h3>
                     <code className="mt-2 block font-mono text-sm text-gray-600">https://api.gms-cloud.namduong.dev</code>
                     <p className="mt-2 text-xs text-gray-500">Tất cả request cần gửi kèm <code className="rounded bg-gray-100 px-1 font-mono">credentials: "include"</code> để cookie hoạt động đúng.</p>
                 </div>
 
-                {/* Footer */}
                 <footer className="mt-10 border-t border-gray-200 pt-6 text-center text-xs text-gray-400">
                     GMS Cloud API Documentation · Liên hệ{" "}
                     <a href="mailto:nguyennamduong205@gmail.com" className="text-[#1a73e8] hover:underline">

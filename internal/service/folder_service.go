@@ -1,12 +1,15 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"url-shortener/internal/config"
 	"url-shortener/internal/model"
 
 	"gorm.io/gorm"
 )
+
+var cfg = config.GetConfig()
 
 func GetFolders(accountID uint) ([]model.Folder, error) {
 	var folders []model.Folder
@@ -68,6 +71,13 @@ func DeleteFolder(accountID uint, folder *model.Folder) error {
 		for _, f := range files {
 			totalSize += f.Size
 		}
+
+		// Delete all files in the folder in background
+		go func(files []model.File) {
+			for _, f := range files {
+				config.DeleteObject(context.Background(), cfg.MiniOFinalBucketName, f.StorageKey)
+			}
+		}(files)
 
 		// Delete all files in the folder
 		if err := tx.Where("account_id = ? AND folder_id = ?", accountID, folder.ID).Delete(&model.File{}).Error; err != nil {

@@ -1,5 +1,6 @@
-import Button from "../../button/button";
-import type { FileResponse } from "../../../../services/types/file.type";
+import type { FileResponse } from "../../../../../services/types/file.type";
+import Button from "../../../button/button";
+
 
 interface ShareFileModalProps {
     isOpen: boolean;

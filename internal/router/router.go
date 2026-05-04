@@ -45,8 +45,11 @@ func SetupRouter() *gin.Engine {
 	// 	api.DELETE("/delete-image", handler.UseAPIDeleteImageHandler)
 	// }
 
-	// share := r.Group("/api/share")
-	// share.Use(middleware.ShareFileMiddleware())
+	share := r.Group("/api/share")
+	share.Use(middleware.ShareFileMiddleware())
+	{
+		share.GET("/files/:code", handler.DownloadSharedFile)
+	}
 
 	protected := r.Group("/api/guard")
 	protected.Use(middleware.AuthMiddleware())
@@ -54,17 +57,23 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/auth-config", handler.AuthConfig)
 		protected.POST("/change-password", handler.ChangePassword)
 
+		/**
+		* Presign, upload, complete upload router
+		 */
 		protected.POST("/presign-upload", handler.PresignUpload)
 		protected.POST("/sign-upload/:uuid", handler.SignUpload)
 		protected.POST("/complete-multipart-upload/:uuid", handler.CompleteMultipartUpload)
 		protected.POST("/complete-single-upload/:uuid", handler.CompleteSingleUpload)
 
-		// protected.GET("/profile", handler.GetProfile)
-		// protected.PUT("/profile", handler.UpdateProfile)
+		protected.GET("/profile", handler.GetProfile)
+		protected.PUT("/profile", handler.UpdateProfile)
 
-		// protected.GET("/tokens", handler.GetToken)
-		// protected.POST("/tokens", handler.CreateToken)
-		// protected.DELETE("/tokens/:uuid", handler.DeleteToken)
+		protected.GET("/tokens", handler.GetTokens)
+		protected.POST("/tokens", handler.CreateToken)
+		protected.DELETE("/tokens/:uuid", handler.DeleteToken)
+		protected.PATCH("/tokens/:uuid/renew", handler.RenewToken)
+
+		protected.GET("/logs", handler.GetActivityLogs)
 
 		protected.GET("/folders", handler.GetFolders)
 		protected.POST("/folders", handler.CreateFolder)

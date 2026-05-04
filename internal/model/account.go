@@ -40,10 +40,11 @@ type Account struct {
 	// One-to-One relationship with Profile
 	Profile Profile `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 
-	Tokens  []Token
-	Folders []Folder
-	Files   []File
-	URLs    []URL
+	Tokens   []Token
+	Folders  []Folder
+	Files    []File
+	URLs     []URL
+	Activity []ActivityLog
 
 	Sessions []Session
 

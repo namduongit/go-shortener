@@ -26,6 +26,7 @@ func main() {
 		&model.Token{},
 		&model.Session{},
 		&model.Part{},
+		&model.ActivityLog{},
 	)
 
 	// Init 3 plans: Free, Pro, Enterprise

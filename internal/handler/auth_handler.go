@@ -131,6 +131,10 @@ func Login(c *gin.Context) {
 
 	utils.SetAccessTokenCookie(c, *tokenString)
 
+	// Ghi log async
+	go service.WriteLog(account.ID, model.LogActionLogin,
+		"Đăng nhập thành công", c.ClientIP(), c.Request.UserAgent())
+
 	response := response.LoginResponse{
 		UUID:  account.UUID.String(),
 		Email: account.Email,
@@ -154,7 +158,6 @@ func Login(c *gin.Context) {
 * ! This method handled in middlware
 * TODO: Auth config -> Check token in cookie -> If valid, return user info and session config -> If invalid, clear cookie and return unauthorized
  */
-
 func AuthConfig(c *gin.Context) {
 	tokenStr, _ := c.Cookie("accessToken")
 	authenticated := false
@@ -211,7 +214,6 @@ func AuthConfig(c *gin.Context) {
 * * Forgot password method
 * TODO: Forgot password -> Generate reset token -> Send reset email
  */
-
 func ForgotPassword(c *gin.Context) {
 	var req request.ForgotPasswordRequest
 	if err := libs.WithBind(c, &req); err != nil {
@@ -291,6 +293,10 @@ func ChangePassword(c *gin.Context) {
 	// Clear old cookie and set new cookie with new token
 	utils.ClearAccessTokenCookie(c)
 	utils.SetAccessTokenCookie(c, *tokenString)
+
+	// Ghi log async
+	go service.WriteLog(account.ID, model.LogActionChangePassword,
+		"Đổi mật khẩu thành công", c.ClientIP(), c.Request.UserAgent())
 
 	c.JSON(
 		http.StatusOK,
