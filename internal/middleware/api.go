@@ -1,73 +1,75 @@
 package middleware
 
-// import (
-// 	"net/http"
-// 	"url-shortener/internal/config"
-// 	"url-shortener/internal/utils"
+import (
+	"net/http"
+	"url-shortener/internal/config"
+	"url-shortener/internal/service"
+	"url-shortener/internal/utils"
 
-// 	"github.com/gin-gonic/gin"
-// )
+	"github.com/gin-gonic/gin"
+)
 
-// func APIMiddleware() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		publicKey := c.GetHeader("X-Public-Key")
-// 		privateKey := c.GetHeader("X-Private-Key")
+func APIMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		publicKey := c.GetHeader("X-Public-Key")
+		privateKey := c.GetHeader("X-Private-Key")
 
-// 		if publicKey == "" || privateKey == "" {
-// 			c.JSON(
-// 				http.StatusForbidden,
-// 				config.GinErrorResponse(
-// 					"Missing API keys",
-// 					config.RestFulForbidden,
-// 					config.RestFulCodeForbidden,
-// 				),
-// 			)
-// 			return
-// 		}
+		if publicKey == "" || privateKey == "" {
+			c.JSON(
+				http.StatusForbidden,
+				config.GinErrorResponse(
+					"Missing API keys",
+					config.RestFulForbidden,
+					config.RestFulCodeForbidden,
+				),
+			)
+			return
+		}
 
-// 		token, err := repository.GetTokenByPublicToken(publicKey)
-// 		if err != nil {
-// 			c.JSON(
-// 				http.StatusUnauthorized,
-// 				config.GinErrorResponse(
-// 					"Invalid API token",
-// 					config.RestFulUnauthorized,
-// 					config.RestFulCodeUnauthorized,
-// 				),
-// 			)
-// 			return
-// 		}
+		token, err := service.GetTokenByPublicToken(publicKey)
 
-// 		// Valid token
-// 		isValid := utils.VerifyAPIToken(privateKey, token.TokenHash)
+		if err != nil {
+			c.JSON(
+				http.StatusUnauthorized,
+				config.GinErrorResponse(
+					"Invalid API token",
+					config.RestFulUnauthorized,
+					config.RestFulCodeUnauthorized,
+				),
+			)
+			return
+		}
 
-// 		if !isValid {
-// 			c.JSON(
-// 				http.StatusUnauthorized,
-// 				config.GinErrorResponse(
-// 					"Invalid API token",
-// 					config.RestFulUnauthorized,
-// 					config.RestFulCodeUnauthorized,
-// 				),
-// 			)
-// 			return
-// 		}
+		// Valid token
+		isValid := utils.VerifyAPIToken(privateKey, token.TokenHash)
 
-// 		account, err := repository.GetAccountByID(token.AccountID)
-// 		if err != nil {
-// 			c.JSON(
-// 				http.StatusInternalServerError,
-// 				config.GinErrorResponse(
-// 					err.Error(),
-// 					config.RestFulUnauthorized,
-// 					config.RestFulCodeUnauthorized,
-// 				),
-// 			)
-// 			return
-// 		}
+		if !isValid {
+			c.JSON(
+				http.StatusUnauthorized,
+				config.GinErrorResponse(
+					"Invalid API token",
+					config.RestFulUnauthorized,
+					config.RestFulCodeUnauthorized,
+				),
+			)
+			return
+		}
 
-// 		c.Set("account", account)
+		account, err := service.GetAccountByID(token.AccountID)
+		if err != nil {
+			c.JSON(
+				http.StatusInternalServerError,
+				config.GinErrorResponse(
+					err.Error(),
+					config.RestFulUnauthorized,
+					config.RestFulCodeUnauthorized,
+				),
+			)
+			return
+		}
 
-// 		c.Next()
-// 	}
-// }
+		c.Set("account", account)
+
+		c.Next()
+	}
+}

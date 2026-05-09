@@ -29,7 +29,7 @@ export const FolderModule = {
 
     // Rename folder
     async RenameFolder(uuid: string, name: string) {
-        const response = await api.put<RestResponse<FolderResponse>>(`/api/guard/folders/${uuid}`, { name: name });
+        const response = await api.patch<RestResponse<FolderResponse>>(`/api/guard/folders/${uuid}`, { name: name });
         return response.data;
     },
 

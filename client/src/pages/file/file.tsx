@@ -30,10 +30,10 @@ const FilePage = () => {
     const { executeWithDeclareResponse, loading } = useExecute();
     const { executeWithDeclareResponse: executeApi } = useExecute();
 
-    const { showToast, showAlert, showFileConflict } = useNotificate();
+    const { showToast, showAlert, showConfirm, showFileConflict } = useNotificate();
 
     const { GetFolders, GetFolderByUuid, CreateFolder, RenameFolder } = FolderModule;
-    const { GetFiles } = FileModule;
+    const { GetFiles, DeleteFile, ShareFile, UnshareFile, DownloadFile } = FileModule;
     const {
         PresignUpload,
         SignSingleUpload, SignMultipartUpload,
@@ -103,7 +103,8 @@ const FilePage = () => {
     }
 
     const handleDeleteFolder = async (uuid: string) => {
-
+        console.log(uuid);
+        showAlert({ title: "Tính năng đang phát triển", message: "Xin lỗi vì sự bất tiện này, hiện tại tính năng xóa thư mục đang trong giai đoạn phát triển. Vui lòng thử lại ở phiên bản sau." });
     }
 
     // File modals state
@@ -276,6 +277,69 @@ const FilePage = () => {
     const [selectedPreviewImage, setSelectedPreviewImage] = useState<FileResponse | null>(null);
     const [targetRenameFolder, setTargetRenameFolder] = useState<FolderResponse | null>(null);
 
+    // File actions
+    const handleDeleteFile = async (file: FileResponse) => {
+        const ok = await showConfirm({
+            title: "Xác nhận xóa tệp",
+            message: `Bạn có chắc chắn muốn xóa "${file.file_name}"? Thao tác này không thể hoàn tác.`,
+        });
+        if (!ok) return;
+        await executeApi(() => DeleteFile(file.uuid), {
+            onSuccess: () => {
+                setFiles((prev) => prev.filter((f) => f.uuid !== file.uuid));
+                showToast({ type: "success", title: "Xóa thành công", message: `Đã xóa "${file.file_name}" và hoàn trả dung lượng.` });
+            },
+        });
+    };
+
+    const handleShareToggle = async (file: FileResponse) => {
+        const isShared = file.is_shared;
+        const action = isShared ? UnshareFile : ShareFile;
+        await executeApi(() => action(file.uuid), {
+            onSuccess: async (data) => {
+                setFiles((prev) => prev.map((f) => (f.uuid === data.uuid ? data : f)));
+                if (!isShared) {
+                    // Vừa share → copy link vào clipboard
+                    const shareLink = `${import.meta.env.VITE_ENDPOINT_SHARE_FILE}/${data.uuid}`;
+                    try {
+                        await navigator.clipboard.writeText(shareLink);
+                        showToast({
+                            type: "success",
+                            title: "Chia sẻ thành công",
+                            message: `Link chia sẻ đã được sao chép vào clipboard.`,
+                        });
+                    } catch {
+                        showToast({
+                            type: "success",
+                            title: "Chia sẻ thành công",
+                            message: `Link: /api/share/files/${data.uuid}`,
+                        });
+                    }
+                } else {
+                    showToast({
+                        type: "success",
+                        title: "Hủy chia sẻ",
+                        message: `Đã ẩn "${file.file_name}" khỏi công cộng.`,
+                    });
+                }
+            },
+        });
+    };
+
+    const handleDownloadFile = async (file: FileResponse) => {
+        const blob = await DownloadFile(file.uuid);
+        if (!blob) {
+            showToast({ type: "error", title: "Lỗi tải xuống", message: "Không thể tải tệp, vui lòng thử lại." });
+            return;
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.file_name;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="space-y-4">
             {/* Toolbar */}
@@ -300,9 +364,14 @@ const FilePage = () => {
                         setTargetRenameFolder(folder);
                         setIsRenameFolderOpen(true);
                     }}
-                    onShareFile={() => { }}
+                    onDeleteFolder={(folder) => handleDeleteFolder(folder.uuid)}
+                    onShareFile={(file) => handleShareToggle(file)}
+                    onDeleteFile={(file) => handleDeleteFile(file)}
+                    onDownloadFile={(file) => handleDownloadFile(file)}
                     onPreviewImage={(file) => {
-                        if (file.content_type?.startsWith("image/")) setSelectedPreviewImage(file);
+                        if (file.content_type?.startsWith("image/")) {
+                            navigate(`/page/files/preview/${file.uuid}`);
+                        }
                     }}
                 />
 

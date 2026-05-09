@@ -86,3 +86,10 @@ func RenewToken(uuid string, accountID uint, daysToAdd int) (*model.Token, error
 	return &token, nil
 }
 
+func GetTokenByPublicToken(publicKey string) (*model.Token, error) {
+	var token model.Token
+	if err := config.PostgresClient.Where("token = ?", publicKey).First(&token).Error; err != nil {
+		return nil, err
+	}
+	return &token, nil
+}

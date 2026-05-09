@@ -64,7 +64,10 @@ const FolderRow = ({
                     <div className="absolute right-0 top-7 z-20 w-44 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
                         <Button
                             className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                            onClick={() => { setMenuKey(null); onRename?.(); }}
+                            onClick={() => {
+                                setMenuKey(null);
+                                onRename?.();
+                            }}
                         >
                             <i className="fa-regular fa-pen-to-square w-4 text-center text-gray-400" />
                             Đổi tên

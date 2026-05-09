@@ -13,9 +13,11 @@ interface RenameFolderModalProps {
 const RenameFolderModal = ({ isOpen, initialName, folderUUID, onClose, onSubmit, loading }: RenameFolderModalProps) => {
     const [folderName, setFolderName] = useState("");
 
-    if (!isOpen) {
-        return null;
-    }
+    useEffect(() => {
+        if (isOpen) {
+            setFolderName(initialName);
+        }
+    }, [isOpen, initialName]);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -23,9 +25,9 @@ const RenameFolderModal = ({ isOpen, initialName, folderUUID, onClose, onSubmit,
         setFolderName("");
     };
 
-    useEffect(() => {
-        setFolderName(initialName);
-    }, [initialName]);
+    if (!isOpen) {
+        return null;
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f2937]/45 px-4 py-6">

@@ -17,7 +17,7 @@ func SetupRouter() *gin.Engine {
 		AllowOrigins: []string{cfg.ClientHost},
 		// AllowOrigins:     []string{"https://gms-cloud-client.namduong.dev"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Authorization", "Content-Type"},
+		AllowHeaders:     []string{"Authorization", "Content-Type", "Origin", "Accept", "X-Requested-With", "X-Public-Key", "X-Private-Key"},
 		AllowCredentials: true,
 	}))
 
@@ -38,12 +38,14 @@ func SetupRouter() *gin.Engine {
 		publicGroup.GET("/images/:code", handler.ShowImage)
 	}
 
-	// api := r.Group("/api/token")
-	// api.Use(middleware.APIMiddleware())
-	// {
-	// 	api.POST("/upload-image", handler.UseAPIUpImageHandler)
-	// 	api.DELETE("/delete-image", handler.UseAPIDeleteImageHandler)
-	// }
+	api := r.Group("/api/token")
+	api.Use(middleware.APIMiddleware())
+	{
+		api.POST("/presign-upload", handler.APIPresignUpload)
+		api.POST("/sign-upload/:uuid", handler.APISignUpload)
+		api.POST("/complete-upload/:uuid", handler.APICompleteSingleUpload)
+		api.POST("/complete-multipart-upload/:uuid", handler.APICompleteMultipartUpload)
+	}
 
 	share := r.Group("/api/share")
 	share.Use(middleware.ShareFileMiddleware())

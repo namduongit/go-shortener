@@ -202,14 +202,14 @@ const AccountApiPage = () => {
                                     <tr key={token.uuid} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-5 py-3.5">
                                             <code className="rounded-md bg-gray-100 px-2 py-1 font-mono text-xs text-gray-700">
-                                                {(token.public_token ?? token.token).slice(0, 16)}…{(token.public_token ?? token.token).slice(-6)}
+                                                {(token.token).slice(0, 16)}...{(token.token ?? token.token).slice(-6)}
                                             </code>
                                         </td>
                                         <td className="px-5 py-3.5">
                                             <span
                                                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${isExpired(token)
-                                                        ? "border-red-200 bg-red-50 text-red-700"
-                                                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                    ? "border-red-200 bg-red-50 text-red-700"
+                                                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
                                                     }`}
                                             >
                                                 <span className={`h-1.5 w-1.5 rounded-full ${isExpired(token) ? "bg-red-500" : "bg-emerald-500"}`} />
@@ -224,7 +224,7 @@ const AccountApiPage = () => {
                                             <div className="inline-flex gap-2">
                                                 <Button
                                                     className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                                    onClick={() => void handleCopy(token.public_token ?? token.token)}
+                                                    onClick={() => void handleCopy(token.token)}
                                                 >
                                                     Copy
                                                 </Button>

@@ -33,13 +33,6 @@ func RegisterAccount(email, password string) (*model.Account, error) {
 			UsedStorage:   0,
 			ReservedBytes: 0,
 		},
-		Profile: model.Profile{
-			AvatarURL:   "",
-			FullName:    "",
-			CompanyName: "",
-			Address:     "",
-			Phone:       "",
-		},
 		Role: model.RoleUser,
 	}
 
@@ -50,9 +43,13 @@ func RegisterAccount(email, password string) (*model.Account, error) {
 		return nil, err
 	}
 
+	profile := model.Profile{AccountID: account.ID}
+	if err := config.PostgresClient.Create(&profile).Error; err != nil {
+		log.Println("Create profile failed: ", err.Error())
+	}
+	account.Profile = profile
 	account.Plan = plan
 
-	// Send verification email
 	go func() {
 		token, err := utils.GenerateActivationToken(account.Email)
 		if err != nil {
@@ -103,6 +100,18 @@ func LoginAccount(email string, password string) (*model.Account, error) {
 func GetAccountByUUIDString(uuid string) (*model.Account, error) {
 	var account model.Account
 	if err := config.PostgresClient.Where("uuid = ?", uuid).Preload("Plan").First(&account).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, errors.New("Account does not exist")
+		}
+		return nil, err
+	}
+
+	return &account, nil
+}
+
+func GetAccountByID(id uint) (*model.Account, error) {
+	var account model.Account
+	if err := config.PostgresClient.Where("id = ?", id).Preload("Plan").First(&account).Error; err != nil {
 		if strings.Contains(err.Error(), "record not found") {
 			return nil, errors.New("Account does not exist")
 		}

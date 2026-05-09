@@ -45,7 +45,7 @@ createRoot(document.getElementById('root')!).render(
 
           <Route path="/verify/success" element={<VerifySuccessPage />} />
           <Route path="/verify/failed" element={<VerifyFailedPage />} />
-          <Route path="/document" element={<DocumentPage />} />
+          <Route path="/page/document" element={<DocumentPage />} />
 
         </Routes>
       </BrowserRouter>
