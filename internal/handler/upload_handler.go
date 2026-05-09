@@ -79,8 +79,14 @@ func SignUpload(c *gin.Context) {
 		return
 	}
 
+	l := make([]string, 0, len(urls))
+
+	for _, url := range urls {
+		l = append(l, strings.ReplaceAll(url, config.GetConfig().StreamUrl, config.GetConfig().ReplaceStream))
+	}
+
 	response := response.SignUploadResponse{
-		UploadURLs: urls,
+		UploadURLs: l,
 	}
 
 	c.JSON(

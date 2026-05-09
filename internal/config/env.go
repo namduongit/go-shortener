@@ -60,6 +60,10 @@ type AppConfig struct {
 	RedisHost     string
 	RedisPassword string
 	RedisDB       int
+
+	// Stream
+	StreamUrl     string
+	ReplaceStream string
 }
 
 var (
@@ -131,6 +135,10 @@ func GetConfig() AppConfig {
 				}
 				return db
 			}(),
+
+			/* Stream */
+			StreamUrl:     getEnv("STREAM_URL", "http://localhost:9000"),
+			ReplaceStream: getEnv("REPLACE_STREAM", "https://api-stream.namduong.dev"),
 		}
 	})
 
